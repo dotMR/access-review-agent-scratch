@@ -1,0 +1,5 @@
+{
+  "description": "Unresolved: no HRIS match, no provisioning_note at all. Should resolve to unresolved. Flag.",
+  "expected_outcome": "unresolved",
+  "identifier": "ext-9921"
+}

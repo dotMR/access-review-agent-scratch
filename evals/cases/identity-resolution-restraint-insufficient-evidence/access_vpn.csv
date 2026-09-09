@@ -1,0 +1,2 @@
+employee_id,system_name,access_level,granted_date,approved_by,last_used_date,status,provisioning_note
+shared-eng-vpn,vpn,granted,2026-05-01,AssetOwner-VPN,2026-09-01,active,"Shared account, various people use this as needed."

@@ -1,0 +1,5 @@
+{
+  "description": "Clean resolution, documented exception: service account whose provisioning_note names a specific, currently-active HRIS owner. Should resolve to documented-exception. No finding.",
+  "expected_outcome": "documented-exception",
+  "identifier": "svc-cicd-deploy"
+}

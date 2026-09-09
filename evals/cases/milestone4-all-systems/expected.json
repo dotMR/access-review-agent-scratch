@@ -1,0 +1,30 @@
+{
+  "description": "One finding per system, five different categories, proving the orchestrator's full five-system reconciliation and each unit's structural isolation at once.",
+  "findings": [
+    {
+      "category": "orphaned",
+      "system_name": "aws",
+      "employee_id": "E9001"
+    },
+    {
+      "category": "dormant-admin",
+      "system_name": "github",
+      "employee_id": "E9002"
+    },
+    {
+      "category": "unapproved",
+      "system_name": "salesforce",
+      "employee_id": "E9003"
+    },
+    {
+      "category": "drift",
+      "system_name": "finance_erp",
+      "employee_id": "E9004"
+    },
+    {
+      "category": "unapproved",
+      "system_name": "vpn",
+      "employee_id": "E9005"
+    }
+  ]
+}

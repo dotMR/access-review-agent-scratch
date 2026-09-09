@@ -1,0 +1,6 @@
+employee_id,name,role,start_date,end_date,status,role_change_history
+E9201,Aws Employee,Software Engineer,2024-01-01,,active,[]
+E9202,Github Employee,Software Engineer,2024-01-01,,active,[]
+E9203,Salesforce Employee,Software Engineer,2024-01-01,,active,[]
+E9204,Finance Employee,Software Engineer,2024-01-01,,active,[]
+E9205,Vpn Employee,Software Engineer,2024-01-01,,active,[]

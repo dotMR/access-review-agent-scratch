@@ -1,0 +1,3 @@
+employee_id,name,role,start_date,end_date,status,role_change_history
+E6004,Jamie Smith,Sales Rep,2023-01-10,,active,[]
+E6005,Jordan Smith,Sales Rep,2023-01-10,,active,[]

@@ -1,0 +1,11 @@
+{
+  "description": "Clean flag: ad-hoc AWS access (HR Admin's baseline is none) unused 185 days (> 180-day threshold). Should flag Dormant ad-hoc.",
+  "findings": [
+    {
+      "category": "dormant-ad-hoc",
+      "system_name": "aws",
+      "employee_id": "E3001"
+    }
+  ],
+  "as_of": "2026-09-08"
+}

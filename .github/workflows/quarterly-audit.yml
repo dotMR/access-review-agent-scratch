@@ -1,0 +1,136 @@
+name: Quarterly Audit Report
+
+# Generates the quarterly per-system + aggregate reports (SPEC.md §6) by
+# rolling up the quarter's already-existing Issue-tracker state - no
+# fresh detection, per orchestrator.py's generate_quarterly_reports (the
+# same "detection already happened, this just reads and renders" model
+# SPEC.md §2 describes). workflow_dispatch lets a period be triggered
+# manually (e.g. for this first, data-free build); the schedule trigger
+# is wired for the real quarterly cadence once live data exists.
+#
+# SCRATCH-REPO COPY (Milestone 12 live trial, dotMR/access-review-agent-
+# scratch only - never merge this env block back into the real repo's
+# copy of this file): GITHUB_WRITE_MODE=real and GITHUB_TOKEN are set
+# below deliberately. The real access-review-agent repo's
+# quarterly-audit.yml keeps GITHUB_WRITE_MODE unset (dry-run, ADR-0007's
+# default) until that's a separate, deliberate decision of its own.
+#
+# generate_narrative is a separate, dedicated gate from GITHUB_WRITE_MODE
+# (Milestone 8): Risk Assessment narrative synthesis is a real Anthropic
+# API call made regardless of GitHub write mode, so it needs its own
+# explicit, deliberate opt-in - only available as a workflow_dispatch
+# input (a human checks it each time), never true on the schedule
+# trigger, which has no inputs to read from at all.
+#
+# Two jobs (Milestone 11): quarterly-report (no gate) commits the six
+# report files; create-release (gated behind the quarterly-release-approval
+# environment's required-reviewer protection rule - SPEC.md §7's
+# human-in-the-loop publish gate) then tags and uploads the Release,
+# reading the just-committed files back rather than re-deriving them.
+on:
+  workflow_dispatch:
+    inputs:
+      period:
+        description: "Reporting period, e.g. 2026-Q1"
+        required: true
+        type: string
+      generate_narrative:
+        description: "Generate Risk Assessment narratives (real Anthropic API cost)"
+        required: false
+        type: boolean
+        default: false
+  schedule:
+    # 00:00 UTC on the 1st of Jan/Apr/Jul/Oct, matching SPEC.md §2's
+    # quarterly-audit cadence. Inert today (dry-run, no live data) - the
+    # Determine period step computes the just-ended quarter for this
+    # trigger, since there's no workflow_dispatch input to read from.
+    - cron: "0 0 1 1,4,7,10 *"
+
+permissions:
+  contents: write
+
+jobs:
+  quarterly-report:
+    runs-on: ubuntu-latest
+    outputs:
+      period: ${{ steps.period.outputs.period }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Determine period
+        id: period
+        # inputs.period is untrusted, free-form text - passed through an
+        # env var rather than spliced directly into the shell script (the
+        # classic GitHub Actions script-injection pattern: a `${{ }}`
+        # value interpolated straight into `run:` becomes shell content,
+        # not just a string). $INPUT_PERIOD is a literal env var value,
+        # never re-parsed as shell.
+        env:
+          INPUT_PERIOD: ${{ inputs.period }}
+        run: |
+          if [ -n "$INPUT_PERIOD" ]; then
+            if ! [[ "$INPUT_PERIOD" =~ ^[0-9]{4}-Q[1-4]$ ]]; then
+              echo "::error::period must match YYYY-Qn (e.g. 2026-Q1), got: $INPUT_PERIOD"
+              exit 1
+            fi
+            echo "period=$INPUT_PERIOD" >> "$GITHUB_OUTPUT"
+          else
+            python3 -c "
+          from datetime import date
+          today = date.today()
+          q = (today.month - 1) // 3
+          year = today.year if q > 0 else today.year - 1
+          q = q if q > 0 else 4
+          print(f'period={year}-Q{q}')
+          " >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate and commit reports
+        env:
+          PERIOD: ${{ steps.period.outputs.period }}
+          # inputs.generate_narrative is undefined (empty) on the schedule
+          # trigger, which run_quarterly_reports.py's "== true" check
+          # correctly treats as disabled - no separate branching needed.
+          ENABLE_RISK_ASSESSMENT_NARRATIVE: ${{ inputs.generate_narrative }}
+          GITHUB_WRITE_MODE: real
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: uv run python scripts/run_quarterly_reports.py
+
+  create-release:
+    needs: quarterly-report
+    runs-on: ubuntu-latest
+    # Human-in-the-loop publish gate (SPEC.md §7): this job doesn't even
+    # start until a required reviewer on the quarterly-release-approval
+    # environment approves it - a real GitHub Actions environment
+    # protection rule, not application-level logic pretending to gate
+    # something.
+    environment: quarterly-release-approval
+    steps:
+      - uses: actions/checkout@v4
+        # Runs AFTER quarterly-report's commits landed on main - this
+        # checkout picks them up, which is what create_quarterly_release
+        # reads from rather than re-deriving the report content.
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Create Release
+        env:
+          PERIOD: ${{ needs.quarterly-report.outputs.period }}
+          GITHUB_WRITE_MODE: real
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: uv run python scripts/create_quarterly_release.py

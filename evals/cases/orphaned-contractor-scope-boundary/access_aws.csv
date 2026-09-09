@@ -1,0 +1,2 @@
+employee_id,system_name,access_level,granted_date,approved_by,last_used_date,status,provisioning_note
+E1003,aws,write,2026-03-02,auto (granted per role policy),2026-09-05,active,

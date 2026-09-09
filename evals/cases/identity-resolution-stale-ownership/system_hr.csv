@@ -1,0 +1,3 @@
+employee_id,name,role,start_date,end_date,status,role_change_history
+E6003,Marcus Webb,Software Engineer,2023-01-10,2026-07-01,terminated,[]
+E6099,Owen Carter,Sales Rep,2023-01-10,,active,[]

@@ -1,0 +1,11 @@
+{
+  "description": "Issue format correctness: the orphaned-clean-flag finding, formatted via open_issue() in dry-run mode, matches SPEC.md §4's title/label format and includes every required body field.",
+  "title": "Orphaned access — Alex Rivera (AWS)",
+  "labels": ["orphaned", "aws"],
+  "body_must_contain": [
+    "**Access detail:** `write` access to aws",
+    "**Expected per policy:** None (terminated 2026-08-01)",
+    "**Time to revoke:**",
+    "**Source record:** `access_aws.csv`, row matching `employee_id=E1001`"
+  ]
+}

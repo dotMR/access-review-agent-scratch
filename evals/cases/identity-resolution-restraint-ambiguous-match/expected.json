@@ -1,0 +1,5 @@
+{
+  "description": "Restraint: provisioning_note names a person whose name matches two equally plausible active HRIS employees. Should resolve to unresolved, not an arbitrary pick. Flag.",
+  "expected_outcome": "unresolved",
+  "identifier": "vpn-jsmith-04"
+}

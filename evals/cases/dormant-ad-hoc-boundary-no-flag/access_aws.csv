@@ -1,0 +1,2 @@
+employee_id,system_name,access_level,granted_date,approved_by,last_used_date,status,provisioning_note
+E3002,aws,read,2024-01-15,AssetOwner-AWS,2026-03-13,active,

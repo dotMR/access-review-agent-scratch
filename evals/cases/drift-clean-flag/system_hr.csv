@@ -1,0 +1,2 @@
+employee_id,name,role,start_date,end_date,status,role_change_history
+E5001,Harriet Boone,Asset Owner,2024-01-10,,active,"[{""date"": ""2026-07-01"", ""old_role"": ""Software Engineer"", ""new_role"": ""Asset Owner""}]"

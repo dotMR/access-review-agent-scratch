@@ -1,0 +1,2 @@
+employee_id,name,role,start_date,end_date,status,role_change_history
+E1002,Jordan Blake,Software Engineer,2023-06-01,2026-08-15,terminated,[]

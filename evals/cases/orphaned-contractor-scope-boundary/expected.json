@@ -1,0 +1,4 @@
+{
+  "description": "Scope-boundary no-flag: contractor's contract end_date is today, but HRIS status is still active (not yet processed as terminated). v1 detects Orphaned via status=terminated only - contractor end-date expiry is an out-of-scope capability (SPEC.md §8). No finding.",
+  "findings": []
+}

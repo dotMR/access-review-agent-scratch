@@ -1,0 +1,84 @@
+name: Eval Suite
+
+# Separate from the (not-yet-built) production workflow - triggered on any
+# PR touching agent code/prompts/tools, not on a schedule. Per
+# iam-review-agent-design.md's Evals section: this is the quality gate,
+# the production workflow is the operational cadence, and conflating the
+# two would mean each interferes with the other.
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "scripts/**"
+      - "evals/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/eval.yml"
+
+# Explicit least-privilege, even though this workflow never writes
+# anything - the repo's own default_workflow_permissions is already
+# "read", but declaring it here means this workflow stays safe even if
+# that default is ever loosened, or the workflow file is reused
+# elsewhere with looser defaults.
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync
+
+      # Milestones 1-5: plain Python detection (ADR-0006) plus open_issue's
+      # dry-run adapter (ADR-0007) - no ANTHROPIC_API_KEY and no
+      # GITHUB_TOKEN needed here, since dry-run mode is the default and
+      # makes no network call. These steps will collapse into a general
+      # runner discovering all of evals/cases/ as later milestones add
+      # more categories - see development-plan.md.
+      - name: Run Milestone 1 eval suite
+        run: uv run python scripts/run_milestone1.py
+
+      - name: Run Milestone 2 eval suite
+        run: uv run python scripts/run_milestone2.py
+
+      - name: Run Milestone 3 eval suite
+        run: uv run python scripts/run_milestone3.py
+
+      - name: Run Milestone 4 eval suite
+        run: uv run python scripts/run_milestone4.py
+
+      - name: Run Milestone 5 eval suite
+        run: uv run python scripts/run_milestone5.py
+
+      - name: Run Milestone 9 eval suite
+        run: uv run python scripts/run_milestone9.py
+
+      - name: Run Milestone 10 eval suite
+        run: uv run python scripts/run_milestone10.py
+
+      - name: Run Milestone 11 eval suite
+        run: uv run python scripts/run_milestone11.py
+
+      - name: Verify demo-timeline seed data (Milestone 12)
+        run: uv run python scripts/verify_demo_timeline_seed.py
+
+      - name: Verify Identity resolution is wired into run_full_reconciliation
+        run: uv run python scripts/verify_identity_resolution_wiring.py
+
+      # Milestones 6 (Identity resolution) and 8 (Risk Assessment
+      # narrative + LLM-as-judge) are deliberately NOT run here. Both
+      # need a real Agent SDK call, so unlike everything above, every run
+      # of scripts/run_milestone6.py or run_milestone8.py costs real
+      # money. Wiring either in would mean every future PR touching these
+      # paths spends automatically, with no human deciding to spend it
+      # that time - a different cost posture than the rest of this suite,
+      # and one deliberately not taken on by default. Run them locally/
+      # on-demand instead - see development-plan.md's Milestones 6 and 8.

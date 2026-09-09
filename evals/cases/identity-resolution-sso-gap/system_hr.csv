@@ -1,0 +1,3 @@
+employee_id,name,role,start_date,end_date,status,role_change_history
+E6002,Jordan Blake,Software Engineer,2023-01-10,,active,[]
+E6099,Owen Carter,Sales Rep,2023-01-10,,active,[]

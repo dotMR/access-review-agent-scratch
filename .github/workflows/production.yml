@@ -1,0 +1,88 @@
+name: Production Review
+
+# Push-triggered reconciliation (SPEC.md §2): a commit touching one
+# system's access file scopes to that system alone; system_hr.csv,
+# policy-config.yaml, or role-access-mapping.yaml fan out to all five;
+# access-control-policy.md (human-readable prose, not machine-consumed)
+# isn't in this trigger's paths at all, so a commit touching only that
+# file never fires this workflow at all - see src/access_review_agent/
+# dispatch.py and eval-cases.md cases 25-28.
+#
+# SCRATCH-REPO COPY (Milestone 12 live trial, dotMR/access-review-agent-
+# scratch only - never merge this env block back into the real repo's
+# copy of this file): GITHUB_WRITE_MODE=real and GITHUB_TOKEN are set
+# below deliberately, since this trial's whole point is exercising real
+# writes and real Identity resolution Agent SDK calls against a repo
+# that isn't the evidentiary one. The real access-review-agent repo's
+# production.yml keeps GITHUB_WRITE_MODE unset (dry-run, ADR-0007's
+# default) until that's a separate, deliberate decision of its own.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "data/access_aws.csv"
+      - "data/access_github.csv"
+      - "data/access_salesforce.csv"
+      - "data/access_finance_erp.csv"
+      - "data/access_vpn.csv"
+      - "data/system_hr.csv"
+      - "policy-config.yaml"
+      - "role-access-mapping.yaml"
+
+permissions:
+  issues: write
+  contents: read
+
+# Serialize runs rather than letting them overlap (Milestone 9): the
+# Escalation/Accepted-Risk lifecycle check reads a snapshot of ALL open
+# Issues and acts on it, unconditionally, on every run - two overlapping
+# runs could both see the same Issue as "not yet escalated" and both post
+# an escalation comment (GitHub's label API is idempotent, so no
+# duplicate label, but add_comment isn't). cancel-in-progress: false
+# queues a run behind whatever's already in flight rather than cancelling
+# it - a cancelled mid-run could leave writes half-done, worse than
+# waiting a little longer for a queued one.
+#
+# Shared group name (not "production-review") because monthly-report.yml
+# also calls run_full_reconciliation with the same lifecycle checks
+# (Milestone 10) - the two workflows must never run concurrently with
+# each other either, not just with themselves.
+concurrency:
+  group: main-agent-reconciliation
+  cancel-in-progress: false
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Determine changed files
+        run: |
+          if git cat-file -e "${{ github.event.before }}" 2>/dev/null; then
+            git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" > changed_files.txt
+          else
+            # New branch's first push, or the before-SHA isn't reachable at
+            # this fetch depth - fall back to the latest commit's own diff.
+            git diff --name-only "${{ github.sha }}"^ "${{ github.sha }}" > changed_files.txt
+          fi
+          cat changed_files.txt
+
+      - name: Run dispatch + reconciliation
+        env:
+          GITHUB_WRITE_MODE: real
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          export CHANGED_FILES="$(cat changed_files.txt)"
+          uv run python scripts/run_production.py

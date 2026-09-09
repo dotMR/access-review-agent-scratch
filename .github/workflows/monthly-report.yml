@@ -1,0 +1,96 @@
+name: Monthly Operational Flags
+
+# Full reconciliation across all five systems every month (SPEC.md §2,
+# ADR-0003) - real detection, the same mechanism as a push-triggered run,
+# not just a list_issues read, so a system with no recent commits still
+# gets a fresh look. Then commits one report per system listing every
+# currently-open Finding. Informational only: no sign-off, no SLA,
+# doesn't gate Escalation - though the reconciliation call this workflow
+# makes still runs Escalation/Accepted-Risk lifecycle checks as always
+# (Milestone 9), independent of this report.
+#
+# SCRATCH-REPO COPY (Milestone 12 live trial, dotMR/access-review-agent-
+# scratch only - never merge this env block back into the real repo's
+# copy of this file): GITHUB_WRITE_MODE=real and GITHUB_TOKEN are set
+# below deliberately, since this trial's whole point is exercising real
+# writes. The real access-review-agent repo's monthly-report.yml keeps
+# GITHUB_WRITE_MODE unset (dry-run, ADR-0007's default) until that's a
+# separate, deliberate decision of its own.
+on:
+  workflow_dispatch:
+    inputs:
+      period:
+        description: "Reporting period, e.g. 2026-02"
+        required: true
+        type: string
+  schedule:
+    # 00:00 UTC on the 1st of every month, matching SPEC.md §2's
+    # monthly-summary cadence. Inert today (dry-run, no live data) - the
+    # Determine period step computes the just-ended month for this
+    # trigger, since there's no workflow_dispatch input to read from.
+    - cron: "0 0 1 * *"
+
+permissions:
+  issues: write
+  # generate_monthly_reports commits one report per system (commit_report) -
+  # this needs write, not read. contents: read was a latent bug: harmless
+  # while GITHUB_WRITE_MODE stayed unset everywhere (dry-run never calls
+  # the real commit API), but it would have 403'd the moment this workflow
+  # first went to real write mode. Fixed here (and separately in the real
+  # repo's copy) before this scratch trial exercises it for real.
+  contents: write
+
+# Same shared group as production.yml, and for the same reason (Milestone
+# 9/10): both call run_full_reconciliation with Escalation/Accepted-Risk
+# lifecycle checks, which must never run concurrently with each other.
+concurrency:
+  group: main-agent-reconciliation
+  cancel-in-progress: false
+
+jobs:
+  monthly-report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Determine period
+        id: period
+        # inputs.period is untrusted, free-form text - passed through an
+        # env var rather than spliced directly into the shell script (the
+        # classic GitHub Actions script-injection pattern), same fix as
+        # quarterly-audit.yml's own Determine period step.
+        env:
+          INPUT_PERIOD: ${{ inputs.period }}
+        run: |
+          if [ -n "$INPUT_PERIOD" ]; then
+            if ! [[ "$INPUT_PERIOD" =~ ^[0-9]{4}-(0[1-9]|1[0-2])$ ]]; then
+              echo "::error::period must match YYYY-MM (e.g. 2026-02), got: $INPUT_PERIOD"
+              exit 1
+            fi
+            echo "period=$INPUT_PERIOD" >> "$GITHUB_OUTPUT"
+          else
+            python3 -c "
+          from datetime import date
+          today = date.today()
+          year, month = today.year, today.month - 1
+          if month == 0:
+              year, month = year - 1, 12
+          print(f'period={year}-{month:02d}')
+          " >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run full reconciliation and commit monthly reports
+        env:
+          PERIOD: ${{ steps.period.outputs.period }}
+          GITHUB_WRITE_MODE: real
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: uv run python scripts/run_monthly_reports.py

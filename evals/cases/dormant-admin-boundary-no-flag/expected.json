@@ -1,0 +1,5 @@
+{
+  "description": "Boundary no-flag: admin access unused exactly 89 days (below the 90-day threshold). No finding.",
+  "findings": [],
+  "as_of": "2026-09-08"
+}

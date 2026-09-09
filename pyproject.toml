@@ -1,0 +1,26 @@
+[project]
+name = "access-review-agent"
+version = "0.1.0"
+description = "A joiner-mover-leaver access review agent built on the Claude Agent SDK"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "claude-agent-sdk>=0.1.0",
+    "markdown>=3.10.3",
+    "pandas>=2.2",
+    "pygithub>=2.10.0",
+    "pyyaml>=6.0.3",
+    "xhtml2pdf>=0.2.18",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/access_review_agent"]

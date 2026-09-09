@@ -1,0 +1,10 @@
+{
+  "description": "Clean flag: role changed Software Engineer -> Asset Owner; current AWS access (write) still matches the old role's mapping, not the new role's (admin). Should flag Drift.",
+  "findings": [
+    {
+      "category": "drift",
+      "system_name": "aws",
+      "employee_id": "E5001"
+    }
+  ]
+}

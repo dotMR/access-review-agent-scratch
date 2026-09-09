@@ -1,0 +1,5 @@
+{
+  "description": "Restraint: provisioning_note exists but is too vague to extract a specific owner. Should resolve to unresolved, not a guess. Flag.",
+  "expected_outcome": "unresolved",
+  "identifier": "shared-eng-vpn"
+}

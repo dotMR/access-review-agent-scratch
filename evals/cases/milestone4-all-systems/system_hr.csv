@@ -1,0 +1,6 @@
+employee_id,name,role,start_date,end_date,status,role_change_history
+E9001,Dana Kwan,Software Engineer,2023-01-10,2026-08-01,terminated,[]
+E9002,Felix Ortiz,Asset Owner,2022-03-01,,active,[]
+E9003,Grace Liu,Sales Rep,2023-06-15,,active,[]
+E9004,Hassan Ali,Executive (C-level),2021-09-01,,active,"[{""date"": ""2026-06-01"", ""old_role"": ""Finance Analyst"", ""new_role"": ""Executive (C-level)""}]"
+E9005,Ines Tanaka,Contractor,2026-04-01,2026-12-31,active,[]

@@ -1,0 +1,6 @@
+{
+  "description": "Stale ownership: a previously-resolved service account whose documented owner is now status=terminated in HRIS. Should resolve to stale-ownership. Flag.",
+  "expected_outcome": "stale-ownership",
+  "identifier": "svc-billing-sync",
+  "claimed_owner_employee_id": "E6003"
+}

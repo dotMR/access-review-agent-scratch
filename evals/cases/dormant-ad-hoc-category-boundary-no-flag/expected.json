@@ -1,0 +1,5 @@
+{
+  "description": "Category-boundary no-flag: baseline (not ad-hoc) access - Software Engineer's own aws baseline is write - unused 200 days, non-admin level. No finding under Dormant ad-hoc: proves the check is scoped to ad-hoc access specifically, not any old access regardless of origin.",
+  "findings": [],
+  "as_of": "2026-09-08"
+}

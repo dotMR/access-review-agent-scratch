@@ -1,0 +1,5 @@
+{
+  "description": "Boundary no-flag: ad-hoc AWS access unused exactly 179 days (below the 180-day threshold). No finding.",
+  "findings": [],
+  "as_of": "2026-09-08"
+}

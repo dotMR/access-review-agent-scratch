@@ -1,0 +1,5 @@
+{
+  "description": "Exact-threshold no-flag: admin access unused exactly 90 days. Policy says 'more than 90', so exactly 90 is still compliant - proves the boundary is >, not >=.",
+  "findings": [],
+  "as_of": "2026-09-08"
+}

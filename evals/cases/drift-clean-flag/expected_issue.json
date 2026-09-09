@@ -1,0 +1,11 @@
+{
+  "description": "Issue format correctness (Drift): title/labels/body match SPEC.md §4.",
+  "title": "Drift — Harriet Boone (AWS)",
+  "labels": ["drift", "aws"],
+  "body_must_contain": [
+    "**Access detail:** `write` access to aws",
+    "**Expected per policy:** 'admin' (baseline for current role 'Asset Owner')",
+    "**Role change (`2026-07-01`):** `Software Engineer` → `Asset Owner`",
+    "**Source record:** `access_aws.csv`, row matching `employee_id=E5001`"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "description": "Clean flag: terminated employee retains active AWS access. Should flag Orphaned.",
+  "findings": [
+    {
+      "category": "orphaned",
+      "system_name": "aws",
+      "employee_id": "E1001",
+      "source_record": {
+        "file": "access_aws.csv",
+        "employee_id": "E1001"
+      }
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "description": "Clean resolution, SSO-gap: local identifier not matching any employee_id, provisioning_note names a person fuzzy-matchable to exactly one active HRIS employee. Should resolve to resolved-individual. No finding.",
+  "expected_outcome": "resolved-individual",
+  "identifier": "vpn-jblake-77"
+}

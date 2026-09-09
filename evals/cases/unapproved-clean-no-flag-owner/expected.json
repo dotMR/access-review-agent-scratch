@@ -1,0 +1,4 @@
+{
+  "description": "Clean no-flag: approved_by = a real Asset Owner identifier (not null, not 'auto...'). No finding.",
+  "findings": []
+}

@@ -1,0 +1,40 @@
+# Machine-consumed thresholds and scoring parameters.
+#
+# Distinct from role-access-mapping.yaml (the "ought" access-mapping data) and
+# from access-control-policy.md (human-readable Principles, never read by a
+# tool — see ADR-0001). This file holds only the parametric values a Finding
+# or Risk Assessment check runs against: thresholds, an escalation trigger,
+# and the two Risk Assessment lookup tables (ADR-0002).
+#
+# Manually maintained to match access-control-policy.md's Principles; no
+# auto-generation or validation step in either direction (accepted drift
+# risk, same precedent as role-access-mapping.yaml — see
+# iam-review-agent-design.md, Data and config formats).
+
+dormant_thresholds:
+  # access-control-policy.md, Dormant Admin-level access / Dormant Ad-hoc access Principles
+  admin_level_days: 90
+  ad_hoc_days: 180 # v1 Core, Evidentiary/quarterly only — see SPEC.md §8
+
+escalation:
+  # access-control-policy.md, Operational review / Unremediated findings Principles.
+  # Orphaned is the only v1 Core category with an Operational cadence of its
+  # own to escalate against (see CONTEXT.md, Escalation).
+  orphaned_sla_days: 0 # same-day
+
+risk_assessment:
+  # Likelihood: quarterly-recurrence count, not a lookup — see SPEC.md §5.
+  # Impact = lookup(system_criticality, access_level). system_criticality
+  # values come from role-access-mapping.yaml.
+  impact_matrix:
+    critical: { read: medium, write: high, admin: high }
+    high: { read: low, write: medium, admin: high }
+    medium: { read: low, write: medium, admin: medium }
+    low: { read: low, write: low, admin: medium }
+
+  # Risk Rating = lookup(likelihood, impact). "critical" is reachable only
+  # here, never as an impact_matrix value (ADR-0002).
+  risk_rating_matrix:
+    low: { low: low, medium: low, high: medium }
+    medium: { low: low, medium: medium, high: high }
+    high: { low: medium, medium: high, high: critical }

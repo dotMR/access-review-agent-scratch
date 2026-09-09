@@ -1,0 +1,11 @@
+{
+  "description": "Boundary flag: admin access unused exactly 91 days (just over the 90-day threshold). Should flag.",
+  "findings": [
+    {
+      "category": "dormant-admin",
+      "system_name": "aws",
+      "employee_id": "E2003"
+    }
+  ],
+  "as_of": "2026-09-08"
+}

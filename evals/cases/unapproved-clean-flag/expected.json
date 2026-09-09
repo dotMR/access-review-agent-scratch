@@ -1,0 +1,10 @@
+{
+  "description": "Clean flag: approved_by is null. Should flag Unapproved.",
+  "findings": [
+    {
+      "category": "unapproved",
+      "system_name": "aws",
+      "employee_id": "E4001"
+    }
+  ]
+}

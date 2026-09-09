@@ -1,0 +1,4 @@
+{
+  "description": "Category-boundary no-flag: no role change at all (empty role_change_history), but the employee holds ad-hoc, properly-approved AWS access (read) exceeding HR Admin's baseline (none). No finding under Drift - Drift is scoped to post-role-change mismatches specifically.",
+  "findings": []
+}
