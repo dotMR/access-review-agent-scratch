@@ -30,7 +30,11 @@ from access_review_agent.github.adapter import (
 from access_review_agent.detection.identity_resolution import detect_identity_resolution
 from access_review_agent.github.issues import open_issue
 from access_review_agent.grounding import GroundingError
-from access_review_agent.lifecycle import close_accepted_risk_issues, escalate_overdue_issues
+from access_review_agent.lifecycle import (
+    close_accepted_risk_issues,
+    close_remediated_issues,
+    escalate_overdue_issues,
+)
 from access_review_agent.narrative import synthesize_narrative
 from access_review_agent.pdf_export import render_pdf
 from access_review_agent.reports import (
@@ -113,6 +117,20 @@ async def run_full_reconciliation(
     reasoning above; every eval suite's opened-Issue counts are
     unaffected since none of their fixtures pass True.
 
+    Also runs Remediation re-check (SPEC.md §8, iam-review-agent-
+    design.md's "Closing the loop") per system, right after that
+    system's own findings are computed: close_remediated_issues closes
+    any of that system's open Issues whose finding is no longer among
+    `findings` - the access was genuinely fixed, not just an Issue closed
+    by hand. Unlike Escalation/Accepted-Risk below, this needs fresh
+    per-system detection data to know "is this still true," not just
+    Issue metadata, so it's called once per system inside this loop, not
+    unconditionally afterward. A real, previously-missing capability -
+    found live during Milestone 12's scratch-repo trial (an Orphaned
+    Issue stayed open after its access was genuinely revoked in the seed
+    data), not designed in speculatively; also gated by check_lifecycle
+    for the same reason as dedup.
+
     Per-system failure isolation (SPEC.md §7's fail-loud completeness,
     Milestone 11): a malformed source file for one system (missing
     columns, same-file consistency mismatch, a missing file entirely)
@@ -124,8 +142,9 @@ async def run_full_reconciliation(
     should still crash loudly rather than being silently absorbed.
 
     Returns {"systems": {<system_name>: {detected, opened, rejected,
-    skipped_existing, failed}}, "lifecycle": {accepted_risk_closed,
-    escalated} | None} - two clearly separate shapes under their own
+    skipped_existing, remediated_closed, failed}}, "lifecycle": {
+    accepted_risk_closed, escalated} | None} - two clearly separate
+    shapes under their own
     keys, not flattened together, so a caller iterating per-system
     results can't accidentally trip over the differently-shaped
     lifecycle entry.
@@ -158,6 +177,7 @@ async def run_full_reconciliation(
                 "opened": [],
                 "rejected": [],
                 "skipped_existing": [],
+                "remediated_closed": [],
                 "failed": str(e),
             }
             continue
@@ -181,6 +201,7 @@ async def run_full_reconciliation(
                 "opened": [],
                 "rejected": [],
                 "skipped_existing": [],
+                "remediated_closed": [],
                 "failed": f"Identity resolution failed: {e}",
             }
             continue
@@ -202,20 +223,48 @@ async def run_full_reconciliation(
             else:
                 opened.append(result)
 
+        # Remediation re-check (SPEC.md §8, iam-review-agent-design.md's
+        # "Closing the loop"): only meaningful with real Issue data, same
+        # check_lifecycle gate as dedup above - and only using `findings`,
+        # this system's own just-computed detection, never another
+        # system's, per close_remediated_issues' own scoping.
+        remediated_closed: list[int] = []
+        if all_issues is not None:
+            remediated_closed = close_remediated_issues(
+                get_adapter(), repo_full_name, system_name, findings, all_issues
+            )
+
         systems_results[system_name] = {
             "detected": len(findings),
             "opened": opened,
             "rejected": rejected,
             "skipped_existing": skipped_existing,
+            "remediated_closed": remediated_closed,
             "failed": None,
         }
 
     lifecycle_results = None
     if check_lifecycle:
         adapter = get_adapter()
+        # all_issues is a snapshot from before the per-system loop above -
+        # any Issue close_remediated_issues just closed this same run is
+        # still "open" in it. Without filtering those out here,
+        # escalate_overdue_issues (which only reads Issue metadata, never
+        # re-fetches) would apply an escalated label/comment to something
+        # that's already been closed as remediated moments ago in the
+        # very same run - a real, reachable overlap: an Orphaned Issue a
+        # couple of days old, not yet escalated, whose access happens to
+        # get revoked in this same run. close_accepted_risk_issues can't
+        # hit this same overlap - close_remediated_issues unconditionally
+        # skips any accepted-risk-labeled Issue - but filtering here too
+        # is free and keeps this defensive, not order-dependent.
+        remediated_this_run = {
+            number for summary in systems_results.values() for number in summary["remediated_closed"]
+        }
+        remaining_issues = [i for i in all_issues if i.number not in remediated_this_run]
         lifecycle_results = {
-            "accepted_risk_closed": close_accepted_risk_issues(adapter, repo_full_name, all_issues),
-            "escalated": escalate_overdue_issues(adapter, repo_full_name, all_issues),
+            "accepted_risk_closed": close_accepted_risk_issues(adapter, repo_full_name, remaining_issues),
+            "escalated": escalate_overdue_issues(adapter, repo_full_name, remaining_issues),
         }
     return {"systems": systems_results, "lifecycle": lifecycle_results}
 

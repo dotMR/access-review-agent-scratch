@@ -58,7 +58,9 @@ async def main() -> None:
             continue
         print(
             f"{system_name}: {summary['detected']} detected, "
-            f"{len(summary['opened'])} opened, {len(summary['rejected'])} rejected"
+            f"{len(summary['opened'])} opened, {len(summary['rejected'])} rejected, "
+            f"{len(summary['skipped_existing'])} already open, "
+            f"{len(summary['remediated_closed'])} remediated"
         )
         for rejected in summary["rejected"]:
             print(f"  REJECTED (ungrounded): {rejected['reason']}")
