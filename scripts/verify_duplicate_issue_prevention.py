@@ -141,10 +141,58 @@ async def case_name_collision_not_deduped() -> bool:
     return not problems
 
 
+async def case_extra_label_does_not_break_system_matching() -> bool:
+    """Found live during Milestone 12's scratch-repo trial, a genuine
+    duplicate produced in production: an already-open Issue that ALSO
+    carries accepted-risk (three labels total, not _format_labels' usual
+    two) must still be recognized correctly - system_of() previously
+    picked "whichever label isn't the category", which meant an Issue
+    with accepted-risk present could return "accepted-risk" as if it
+    were the system, producing a wrong dedup key and letting a real
+    duplicate Issue open right alongside the original.
+    """
+    from access_review_agent.orchestrator import run_full_reconciliation
+
+    already_open_with_extra_label = _mock_issue(
+        401, "Unapproved access — Github Employee (GitHub)", "E9202",
+        ["accepted-risk", "unapproved", "github"],  # accepted-risk listed FIRST, same order as the live bug
+    )
+
+    with patch(
+        "access_review_agent.orchestrator.list_issues", return_value=[already_open_with_extra_label]
+    ):
+        results = await run_full_reconciliation(
+            FIXTURE_DIR, SCRATCH_REPO, systems=None, check_lifecycle=True
+        )
+
+    github_result = results["systems"]["github"]
+    problems = []
+    if len(github_result["opened"]) != 0:
+        problems.append(
+            f"expected 0 Issues opened for github (already open, despite the extra accepted-risk "
+            f"label) - got {len(github_result['opened'])}"
+        )
+    if len(github_result["skipped_existing"]) != 1:
+        problems.append(
+            f"expected the github finding to be recognized as already open despite the extra label "
+            f"- got {github_result['skipped_existing']}"
+        )
+
+    status = "PASS" if not problems else "FAIL"
+    print(
+        f"[{status}] duplicate-issue-prevention-extra-label — an Issue with a THIRD label "
+        "(accepted-risk) is still matched correctly, not mistaken for a different system"
+    )
+    for p in problems:
+        print(f"         {p}")
+    return not problems
+
+
 async def main() -> None:
     results = [
         await case_duplicate_issue_skipped(),
         await case_name_collision_not_deduped(),
+        await case_extra_label_does_not_break_system_matching(),
     ]
     total, passed = len(results), sum(results)
     print(f"\n{passed}/{total} cases passed")

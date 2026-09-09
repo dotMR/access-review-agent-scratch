@@ -84,17 +84,26 @@ def category_of(issue: IssueInfo) -> str | None:
     return next((label for label in issue.labels if label in CATEGORY_DISPLAY), None)
 
 
+_SYSTEM_LABEL_TO_NAME = {label: name for name, label in SYSTEM_LABEL.items()}
+
+
 def system_of(issue: IssueInfo) -> str | None:
     """The system_name an Issue was opened for, recovered from its own
-    labels - github/issues.py's _format_labels always writes exactly
-    [category, system-name-with-hyphens], so the system is whichever
-    label isn't the category. The inverse of category_of, on the other
-    label; ".replace('-', '_')" undoes _format_labels' own
-    "finance_erp" -> "finance-erp" substitution.
+    labels via the fixed SYSTEM_LABEL mapping - NOT "whichever label
+    isn't the category". github/issues.py's _format_labels writes
+    exactly [category, system] at creation time, but an Issue can carry
+    MORE labels than that once lifecycle actions apply accepted-risk or
+    escalated later (Milestone 9) - "whichever label isn't the category"
+    is ambiguous the moment a third label exists, and a naive first-match
+    could pick accepted-risk/escalated as if it were the system. Found
+    live during Milestone 12's scratch-repo trial: an accepted-risk-
+    labeled Issue's system_of() returned "accepted-risk" instead of
+    "vpn", producing a wrong duplicate-Issue-prevention key and letting a
+    second Issue for the same finding open right alongside the original.
+    Matching against the fixed, known set of system labels is
+    unambiguous regardless of how many other labels an Issue carries.
     """
-    category = category_of(issue)
-    system_label = next((label for label in issue.labels if label != category), None)
-    return system_label.replace("-", "_") if system_label else None
+    return next((_SYSTEM_LABEL_TO_NAME[label] for label in issue.labels if label in _SYSTEM_LABEL_TO_NAME), None)
 
 
 def source_employee_id(issue: IssueInfo) -> str | None:
