@@ -84,6 +84,31 @@ def category_of(issue: IssueInfo) -> str | None:
     return next((label for label in issue.labels if label in CATEGORY_DISPLAY), None)
 
 
+def system_of(issue: IssueInfo) -> str | None:
+    """The system_name an Issue was opened for, recovered from its own
+    labels - github/issues.py's _format_labels always writes exactly
+    [category, system-name-with-hyphens], so the system is whichever
+    label isn't the category. The inverse of category_of, on the other
+    label; ".replace('-', '_')" undoes _format_labels' own
+    "finance_erp" -> "finance-erp" substitution.
+    """
+    category = category_of(issue)
+    system_label = next((label for label in issue.labels if label != category), None)
+    return system_label.replace("-", "_") if system_label else None
+
+
+def source_employee_id(issue: IssueInfo) -> str | None:
+    """The employee_id embedded in an Issue's own Source record line -
+    github/issues.py's _format_body always writes one, regardless of
+    category. This is the true unique key a finding was opened for,
+    unlike the title's identity (employee_name), which isn't guaranteed
+    unique across employees - two people can share a display name, but
+    never an employee_id.
+    """
+    match = re.search(r"employee_id=([^`]+)", issue.body)
+    return match.group(1) if match else None
+
+
 def summary_counts(issues: list[IssueInfo]) -> dict[str, int]:
     """Total/remediated/open/accepted-risk/escalated counts across
     `issues` - shared by build_aggregate_report's Executive Summary and

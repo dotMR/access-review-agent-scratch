@@ -73,6 +73,9 @@ jobs:
       - name: Verify Identity resolution is wired into run_full_reconciliation
         run: uv run python scripts/verify_identity_resolution_wiring.py
 
+      - name: Verify duplicate-Issue prevention
+        run: uv run python scripts/verify_duplicate_issue_prevention.py
+
       # Milestones 6 (Identity resolution) and 8 (Risk Assessment
       # narrative + LLM-as-judge) are deliberately NOT run here. Both
       # need a real Agent SDK call, so unlike everything above, every run

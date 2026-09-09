@@ -40,7 +40,10 @@ from access_review_agent.reports import (
     build_aggregate_report,
     build_monthly_report,
     build_per_system_report,
+    category_of,
+    source_employee_id,
     summary_counts,
+    system_of,
 )
 from access_review_agent.risk_assessment import build_risk_assessment_entries
 from access_review_agent.tools.policy import DEFAULT_ROLE_ACCESS_MAPPING_PATH, read_policy
@@ -88,6 +91,28 @@ async def run_full_reconciliation(
     (scripts/run_milestone9.py) and doesn't need re-exercising through
     every other milestone's detection tests too.
 
+    The same list_issues read also powers duplicate-Issue prevention:
+    every currently-open Issue's (category, system_name, employee_id) -
+    its real unique key, not its rendered title, see open_issue's own
+    docstring for why - is passed to open_issue, which skips creating a
+    new one for any finding whose key already matches. Found live during
+    Milestone 12's scratch-repo trial, not designed in speculatively: a push touching
+    system_hr.csv/policy-config.yaml/role-access-mapping.yaml fans out to
+    all five systems (dispatch.py) and re-detects every already-known,
+    still-open finding right along with anything genuinely new: with
+    nothing to recognize "already open," every such push duplicated
+    every one of them. Reuses the SAME list_issues call the lifecycle
+    pass below already needed, rather than a second fetch - safe to
+    fetch once, before detection runs rather than after, because neither
+    lifecycle check can ever act on an Issue this same run just opened
+    (escalate_overdue_issues requires days_open > sla_days, impossible
+    for an Issue created today; close_accepted_risk_issues requires the
+    accepted-risk label, never set at creation time) - so which side of
+    detection the fetch happens on changes nothing lifecycle-side.
+    check_lifecycle=False skips dedup too, for the same credential-free
+    reasoning above; every eval suite's opened-Issue counts are
+    unaffected since none of their fixtures pass True.
+
     Per-system failure isolation (SPEC.md §7's fail-loud completeness,
     Milestone 11): a malformed source file for one system (missing
     columns, same-file consistency mismatch, a missing file entirely)
@@ -99,11 +124,29 @@ async def run_full_reconciliation(
     should still crash loudly rather than being silently absorbed.
 
     Returns {"systems": {<system_name>: {detected, opened, rejected,
-    failed}}, "lifecycle": {accepted_risk_closed, escalated} | None} -
-    two clearly separate shapes under their own keys, not flattened
-    together, so a caller iterating per-system results can't accidentally
-    trip over the differently-shaped lifecycle entry.
+    skipped_existing, failed}}, "lifecycle": {accepted_risk_closed,
+    escalated} | None} - two clearly separate shapes under their own
+    keys, not flattened together, so a caller iterating per-system
+    results can't accidentally trip over the differently-shaped
+    lifecycle entry.
     """
+    all_issues = list_issues(repo_full_name) if check_lifecycle else None
+    existing_open_keys = None
+    if all_issues is not None:
+        # (category, system_name, employee_id) - the finding's own real
+        # unique key (open_issue's own docstring explains why not the
+        # rendered title). A malformed/older Issue that doesn't parse
+        # cleanly (no recognized category label, or a body predating
+        # _format_body's Source record line) is simply not included here -
+        # worst case it risks one future duplicate for that one Issue, not
+        # a crash, and every Issue this system itself ever writes always
+        # parses cleanly by construction.
+        existing_open_keys = {
+            (category_of(i), system_of(i), source_employee_id(i))
+            for i in all_issues
+            if i.state == "open" and category_of(i) and system_of(i) and source_employee_id(i)
+        }
+
     systems_results: dict[str, Any] = {}
     for system_name in (systems if systems is not None else SYSTEMS):
         try:
@@ -114,6 +157,7 @@ async def run_full_reconciliation(
                 "detected": 0,
                 "opened": [],
                 "rejected": [],
+                "skipped_existing": [],
                 "failed": str(e),
             }
             continue
@@ -136,29 +180,39 @@ async def run_full_reconciliation(
                 "detected": 0,
                 "opened": [],
                 "rejected": [],
+                "skipped_existing": [],
                 "failed": f"Identity resolution failed: {e}",
             }
             continue
 
         opened: list[IssueResult] = []
         rejected: list[dict[str, Any]] = []
+        skipped_existing: list[dict[str, Any]] = []
         for finding in findings:
             try:
-                opened.append(open_issue(finding, repo_full_name, data_dir, commit_sha))
+                result = open_issue(
+                    finding, repo_full_name, data_dir, commit_sha,
+                    existing_open_keys=existing_open_keys,
+                )
             except GroundingError as e:
                 rejected.append({"finding": finding, "reason": str(e)})
+                continue
+            if result is None:
+                skipped_existing.append(finding)
+            else:
+                opened.append(result)
 
         systems_results[system_name] = {
             "detected": len(findings),
             "opened": opened,
             "rejected": rejected,
+            "skipped_existing": skipped_existing,
             "failed": None,
         }
 
     lifecycle_results = None
     if check_lifecycle:
         adapter = get_adapter()
-        all_issues = list_issues(repo_full_name)
         lifecycle_results = {
             "accepted_risk_closed": close_accepted_risk_issues(adapter, repo_full_name, all_issues),
             "escalated": escalate_overdue_issues(adapter, repo_full_name, all_issues),
