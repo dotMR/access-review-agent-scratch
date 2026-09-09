@@ -1,5 +1,5 @@
 employee_id,system_name,access_level,granted_date,approved_by,last_used_date,status,provisioning_note
-kjack_vpn,vpn,granted,2024-07-22,IT Helpdesk (ticket #4821),2026-09-09,active,"VPN access requested by K. Jack, IT ticket #4821."
+kjack_vpn,vpn,granted,2024-07-22,IT Helpdesk (ticket #4821),2026-09-10,active,"VPN access requested by K. Jack, IT ticket #4821."
 E9307,vpn,granted,2026-09-09,auto (granted per role policy),2026-09-09,active,
 vpn-legacy-4402,vpn,granted,2019-04-30,"legacy grant, pre-dates current approval process",2026-09-09,active,
 E9310,vpn,granted,2026-09-09,Asset Owner: E9304 (Bobson Dugnutt),2026-09-09,active,
