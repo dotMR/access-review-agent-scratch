@@ -1,2 +1,3 @@
 employee_id,system_name,access_level,granted_date,approved_by,last_used_date,status,provisioning_note
 E9305,finance_erp,admin,2020-09-01,Asset Owner: E9304 (Bobson Dugnutt),2026-04-22,active,
+E9401,finance_erp,write,2022-03-15,auto (granted per role policy),2026-09-09,active,
