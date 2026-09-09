@@ -1,1 +1,2 @@
 employee_id,system_name,access_level,granted_date,approved_by,last_used_date,status,provisioning_note
+E9304,github,admin,2026-09-09,auto (granted per role policy),2026-09-09,active,
