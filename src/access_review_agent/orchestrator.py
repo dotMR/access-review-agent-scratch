@@ -96,16 +96,20 @@ async def run_full_reconciliation(
     every other milestone's detection tests too.
 
     The same list_issues read also powers duplicate-Issue prevention:
-    every currently-open Issue's (category, system_name, employee_id) -
-    its real unique key, not its rendered title, see open_issue's own
-    docstring for why - is passed to open_issue, which skips creating a
-    new one for any finding whose key already matches. Found live during
-    Milestone 12's scratch-repo trial, not designed in speculatively: a push touching
-    system_hr.csv/policy-config.yaml/role-access-mapping.yaml fans out to
-    all five systems (dispatch.py) and re-detects every already-known,
-    still-open finding right along with anything genuinely new: with
-    nothing to recognize "already open," every such push duplicated
-    every one of them. Reuses the SAME list_issues call the lifecycle
+    every OPEN Issue's, plus every CLOSED accepted-risk Issue's,
+    (category, system_name, employee_id) - the real unique key, not the
+    rendered title, see open_issue's own docstring for why either part
+    of that set matters - is passed to open_issue, which skips creating
+    a new one for any finding whose key already matches. Found live
+    during Milestone 12's scratch-repo trial, not designed in
+    speculatively, in two stages (open_issue's docstring has the full
+    story): first, a push touching system_hr.csv/policy-config.yaml/
+    role-access-mapping.yaml fans out to all five systems (dispatch.py)
+    and re-detects every already-known, still-open finding right along
+    with anything genuinely new; second, an accepted-risk finding's
+    Issue being CLOSED meant open-only checking had no memory of it
+    either, re-opening a finding a human had already formally reviewed.
+    Reuses the SAME list_issues call the lifecycle
     pass below already needed, rather than a second fetch - safe to
     fetch once, before detection runs rather than after, because neither
     lifecycle check can ever act on an Issue this same run just opened
@@ -150,7 +154,7 @@ async def run_full_reconciliation(
     lifecycle entry.
     """
     all_issues = list_issues(repo_full_name) if check_lifecycle else None
-    existing_open_keys = None
+    skip_reopen_keys = None
     if all_issues is not None:
         # (category, system_name, employee_id) - the finding's own real
         # unique key (open_issue's own docstring explains why not the
@@ -160,10 +164,26 @@ async def run_full_reconciliation(
         # worst case it risks one future duplicate for that one Issue, not
         # a crash, and every Issue this system itself ever writes always
         # parses cleanly by construction.
-        existing_open_keys = {
+        #
+        # Includes every OPEN Issue's key (still-unresolved, don't
+        # duplicate) AND every CLOSED accepted-risk Issue's key too -
+        # found live during Milestone 12's scratch-repo trial: dedup
+        # originally only checked open Issues, so a still-genuinely-
+        # detected finding whose Issue had been formally closed as
+        # accepted-risk (Milestone 9) got treated as brand new on the
+        # very next run and re-opened - directly contradicting
+        # iam-review-agent-design.md's Accepted Risk section ("No expiry
+        # in v1: the underlying condition is never periodically
+        # re-reviewed or re-surfaced once accepted"). A REMEDIATED
+        # closure is deliberately NOT included here - unlike accepted
+        # risk, a fixed-then-later-recurring finding is a genuinely new
+        # instance of the problem and should open a fresh Issue, not be
+        # suppressed forever.
+        skip_reopen_keys = {
             (category_of(i), system_of(i), source_employee_id(i))
             for i in all_issues
-            if i.state == "open" and category_of(i) and system_of(i) and source_employee_id(i)
+            if (i.state == "open" or "accepted-risk" in i.labels)
+            and category_of(i) and system_of(i) and source_employee_id(i)
         }
 
     systems_results: dict[str, Any] = {}
@@ -213,7 +233,7 @@ async def run_full_reconciliation(
             try:
                 result = open_issue(
                     finding, repo_full_name, data_dir, commit_sha,
-                    existing_open_keys=existing_open_keys,
+                    skip_reopen_keys=skip_reopen_keys,
                 )
             except GroundingError as e:
                 rejected.append({"finding": finding, "reason": str(e)})

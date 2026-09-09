@@ -31,6 +31,7 @@ duplicate.
 """
 
 import sys
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
@@ -188,11 +189,56 @@ async def case_extra_label_does_not_break_system_matching() -> bool:
     return not problems
 
 
+async def case_accepted_risk_not_resurfaced() -> bool:
+    """Found live during Milestone 12's scratch-repo trial: a formally
+    accepted-risk finding's Issue is CLOSED (Milestone 9), but the
+    underlying condition is still genuinely detected every run - open-
+    only dedup checking had no memory of it and re-opened it as brand
+    new on the very next run, directly contradicting iam-review-agent-
+    design.md's Accepted Risk section ("the underlying condition is
+    never periodically re-reviewed or re-surfaced once accepted").
+    """
+    from access_review_agent.orchestrator import run_full_reconciliation
+
+    closed_accepted_risk = replace(
+        _mock_issue(501, "Unapproved access — Github Employee (GitHub)", "E9202", ["accepted-risk", "unapproved", "github"]),
+        state="closed",
+    )
+
+    with patch("access_review_agent.orchestrator.list_issues", return_value=[closed_accepted_risk]):
+        results = await run_full_reconciliation(
+            FIXTURE_DIR, SCRATCH_REPO, systems=None, check_lifecycle=True
+        )
+
+    github_result = results["systems"]["github"]
+    problems = []
+    if len(github_result["opened"]) != 0:
+        problems.append(
+            f"expected 0 Issues opened for github (already accepted-risk, closed) - "
+            f"got {len(github_result['opened'])}"
+        )
+    if len(github_result["skipped_existing"]) != 1:
+        problems.append(
+            f"expected the github finding to be recognized as already accepted-risk despite being "
+            f"closed - got {github_result['skipped_existing']}"
+        )
+
+    status = "PASS" if not problems else "FAIL"
+    print(
+        f"[{status}] duplicate-issue-prevention-accepted-risk-not-resurfaced — a CLOSED "
+        "accepted-risk Issue's finding is not re-opened as new"
+    )
+    for p in problems:
+        print(f"         {p}")
+    return not problems
+
+
 async def main() -> None:
     results = [
         await case_duplicate_issue_skipped(),
         await case_name_collision_not_deduped(),
         await case_extra_label_does_not_break_system_matching(),
+        await case_accepted_risk_not_resurfaced(),
     ]
     total, passed = len(results), sum(results)
     print(f"\n{passed}/{total} cases passed")

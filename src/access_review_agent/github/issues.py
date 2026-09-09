@@ -128,7 +128,7 @@ def open_issue(
     repo_full_name: str,
     data_dir: Path,
     commit_sha: str | None = None,
-    existing_open_keys: set[tuple[str, str, str]] | None = None,
+    skip_reopen_keys: set[tuple[str, str, str]] | None = None,
 ) -> IssueResult | None:
     """Validate `finding` against source data (the grounding gate), then
     open a GitHub Issue for it via the dry-run-capable adapter.
@@ -138,17 +138,29 @@ def open_issue(
     (Milestone 5) - only the real production entrypoint ever has a real
     triggering commit SHA to supply; eval/dry-run callers leave it unset.
 
-    `existing_open_keys`, when given, is the set of every currently-open
-    Issue's (category, system_name, employee_id) - the finding's own
-    genuine unique key, not its rendered title. A finding whose key
-    already matches an open Issue is the SAME finding still present on a
-    later run, not a new one, and returns None rather than opening a
-    duplicate. Found live during Milestone 12's scratch-repo trial: a
-    push touching system_hr.csv/policy-config.yaml/role-access-mapping.yaml
-    fans out to all five systems (dispatch.py) and re-detects every
-    already-known, still-open finding right along with anything genuinely
-    new - with nothing to recognize "already open," every such push
-    duplicated every one of them, indefinitely.
+    `skip_reopen_keys`, when given, is the set of (category, system_name,
+    employee_id) - the finding's own genuine unique key, not its
+    rendered title - for every OPEN Issue plus every CLOSED
+    accepted-risk Issue. A finding whose key is in this set returns None
+    rather than opening a duplicate. Found live during Milestone 12's
+    scratch-repo trial, in two stages:
+
+    1. A push touching system_hr.csv/policy-config.yaml/role-access-
+       mapping.yaml fans out to all five systems (dispatch.py) and
+       re-detects every already-known, still-open finding right along
+       with anything genuinely new - with nothing to recognize "already
+       open," every such push duplicated every one of them, indefinitely.
+    2. Open-only wasn't enough either: once a formally accepted-risk
+       finding's Issue is closed (Milestone 9), the underlying condition
+       is still genuinely detected every run (accepted risk isn't
+       remediation - nothing about the data changed), and with only
+       OPEN Issues checked, the very next run re-opened it as if brand
+       new - directly contradicting iam-review-agent-design.md's
+       Accepted Risk section ("No expiry in v1: the underlying condition
+       is never periodically re-reviewed or re-surfaced once accepted").
+       A REMEDIATED closure is deliberately excluded from this set - a
+       fixed-then-later-recurring finding is a genuinely new instance of
+       the problem, not something to suppress forever.
 
     Deliberately NOT keyed on the rendered title (SPEC.md §4's "{Category}
     — {identity} ({System})"), even though that's this system's usual
@@ -169,7 +181,7 @@ def open_issue(
     validate_finding(finding, data_dir)
     title = _format_title(finding)
     key = (finding["category"], finding["system_name"], finding["source_record"]["employee_id"])
-    if existing_open_keys is not None and key in existing_open_keys:
+    if skip_reopen_keys is not None and key in skip_reopen_keys:
         return None
 
     adapter: GitHubAdapter = get_adapter()
