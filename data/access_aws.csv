@@ -1,0 +1,6 @@
+employee_id,system_name,access_level,granted_date,approved_by,last_used_date,status,provisioning_note
+E9301,aws,write,2023-02-01,auto (granted per role policy),2026-09-09,active,
+E9302,aws,write,2023-03-14,auto (granted per role policy),2026-09-09,active,
+E9304,aws,write,2022-11-01,auto (granted per role policy),2026-09-09,active,
+E9306,aws,write,2021-08-09,auto (granted per role policy),2026-09-09,active,
+E9309,aws,write,2021-01-11,auto (granted per role policy),2026-09-09,active,
