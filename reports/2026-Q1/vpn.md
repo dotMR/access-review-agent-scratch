@@ -1,6 +1,6 @@
 # Access Review — VPN — 2026-Q1
 
-**Report generated:** 2026-09-09T09:20:22.924311+00:00
+**Report generated:** 2026-09-09T11:00:12.635021+00:00
 **Data snapshot:** N/A (manual/local run)
 **Model:** Tier 1 (Orphaned, Dormant admin-level, Dormant ad-hoc, Unapproved, Drift): plain Python, no model call (ADR-0006). Tier 2 (Identity resolution): claude-haiku-4-5-20251001 via the Agent SDK.
 **Reporting period:** 2026-Q1
@@ -16,10 +16,10 @@ One of these is generated per Information System (AWS, GitHub, Salesforce, Finan
 | Orphaned access | 0 | 0 | 0 | 0 |
 | Dormant admin-level access | 0 | 0 | 0 | 0 |
 | Unapproved access | 0 | 0 | 0 | 0 |
-| Identity resolution | 1 | 1 | 0 | 2 |
+| Identity resolution | 0 | 2 | 0 | 2 |
 | Drift | 0 | 0 | 0 | 0 |
 | Dormant ad-hoc access | 0 | 0 | 0 | 0 |
-| **Total** | 1 | 1 | 0 | 2 |
+| **Total** | 0 | 2 | 0 | 2 |
 
 ## Findings
 
@@ -45,7 +45,7 @@ One of these is generated per Information System (AWS, GitHub, Salesforce, Finan
 
 | Access record (`employee_id` or local identifier) | Access detail | Resolution | Evidence cited | Date detected | Status | Issue |
 | :-- | :-- | :-- | :-- | :-- | :-- | :-- |
-| svc-billing-sync | `granted` access to vpn | `stale-ownership` | `The provisioning_note identifies this as a service account for 'nightly billing sync' with owner Marcus Webb, but Marcus Webb (E6003) has terminated status in HRIS with end_date 2026-07-01.` | 2026-09-09 | Open | [#8](https://github.com/dotMR/access-review-agent-scratch/issues/8) |
+| svc-billing-sync | `granted` access to vpn | `stale-ownership` | `The provisioning_note identifies this as a service account for 'nightly billing sync' with owner Marcus Webb, but Marcus Webb (E6003) has terminated status in HRIS with end_date 2026-07-01.` | 2026-09-09 | Remediated | [#8](https://github.com/dotMR/access-review-agent-scratch/issues/8) |
 | svc-billing-sync | `granted` access to vpn | `stale-ownership` | `Provisioning note identifies this as a service account owned by Marcus Webb (E6003), but Marcus Webb's HRIS record shows status 'terminated' with end_date 2026-07-01, prior to today (2026-09-09).` | N/A | Remediated | [#7](https://github.com/dotMR/access-review-agent-scratch/issues/7) |
 
 ### Drift
