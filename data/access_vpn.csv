@@ -1,1 +1,2 @@
 employee_id,system_name,access_level,granted_date,approved_by,last_used_date,status,provisioning_note
+kjack_vpn,vpn,granted,2024-07-22,IT Helpdesk (ticket #4821),2026-09-09,active,"VPN access requested by K. Jack, IT ticket #4821."
