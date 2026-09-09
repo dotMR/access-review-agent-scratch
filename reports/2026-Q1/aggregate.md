@@ -1,6 +1,6 @@
 # Quarterly Access Review Audit Report — 2026-Q1
 
-**Report generated:** 2026-09-09T09:20:22.924311+00:00
+**Report generated:** 2026-09-09T11:00:12.635021+00:00
 **Data snapshot:** N/A (manual/local run)
 **Model:** Tier 1 (Orphaned, Dormant admin-level, Dormant ad-hoc, Unapproved, Drift): plain Python, no model call (ADR-0006). Tier 2 (Identity resolution): claude-haiku-4-5-20251001 via the Agent SDK.
 **Reporting period:** 2026-Q1
@@ -13,7 +13,7 @@ This is the formal audit-evidence record for the period, the rollup of the five 
 
 ## Executive summary
 
-8 findings identified this quarter across 6 finding categories and 5 Information Systems. 4 remediated, 3 open, 1 accepted as risk. N/A, no prior period
+8 findings identified this quarter across 6 finding categories and 5 Information Systems. 6 remediated, 0 open, 2 accepted as risk. N/A, no prior period
 
 ## Methodology
 
@@ -23,32 +23,35 @@ The Access Review Agent performed an automated cross-reference of each Informati
 
 | System | Open | Remediated | Accepted risk | Total | Detail |
 | :-- | --: | --: | --: | --: | :-- |
-| AWS | 2 | 3 | 1 | 6 | [aws.md](./aws.md) |
+| AWS | 0 | 4 | 2 | 6 | [aws.md](./aws.md) |
 | GitHub | 0 | 0 | 0 | 0 | [github.md](./github.md) |
 | Salesforce | 0 | 0 | 0 | 0 | [salesforce.md](./salesforce.md) |
 | Finance ERP | 0 | 0 | 0 | 0 | [finance-erp.md](./finance-erp.md) |
-| VPN | 1 | 1 | 0 | 2 | [vpn.md](./vpn.md) |
-| **Total** | 3 | 4 | 1 | 8 | |
+| VPN | 0 | 2 | 0 | 2 | [vpn.md](./vpn.md) |
+| **Total** | 0 | 6 | 2 | 8 | |
 
 ## Findings by category (aggregate)
 
 | Category | Open | Remediated | Accepted risk | Total |
 | :-- | --: | --: | --: | --: |
-| Orphaned access | 1 | 2 | 0 | 3 |
+| Orphaned access | 0 | 2 | 1 | 3 |
 | Dormant admin-level access | 0 | 0 | 1 | 1 |
 | Unapproved access | 0 | 1 | 0 | 1 |
-| Identity resolution | 1 | 1 | 0 | 2 |
-| Drift | 1 | 0 | 0 | 1 |
+| Identity resolution | 0 | 2 | 0 | 2 |
+| Drift | 0 | 1 | 0 | 1 |
 | Dormant ad-hoc access | 0 | 0 | 0 | 0 |
 
 Line-item detail for every finding lives in the per-system reports linked above and in the Appendix, not here.
 
 ## Risk Assessment
 
-_Not yet implemented — lands in Milestone 8. No rows below are a real computation._
-
 | Category | System | Likelihood | Impact | Risk Rating | Narrative & treatment recommendation |
 | :-- | :-- | :-- | :-- | :-- | :-- |
+| Drift | AWS | Low | Medium | Low | _(narrative synthesis disabled for this run — set generate_narrative=True / ENABLE_RISK_ASSESSMENT_NARRATIVE=true to generate; Likelihood/Impact/Risk Rating above are still real, computed values)_ |
+| Unapproved access | AWS | Low | Medium | Low | _(narrative synthesis disabled for this run — set generate_narrative=True / ENABLE_RISK_ASSESSMENT_NARRATIVE=true to generate; Likelihood/Impact/Risk Rating above are still real, computed values)_ |
+| Dormant admin-level access | AWS | Low | High | Medium | _(narrative synthesis disabled for this run — set generate_narrative=True / ENABLE_RISK_ASSESSMENT_NARRATIVE=true to generate; Likelihood/Impact/Risk Rating above are still real, computed values)_ |
+| Orphaned access | AWS | Low | Medium | Low | _(narrative synthesis disabled for this run — set generate_narrative=True / ENABLE_RISK_ASSESSMENT_NARRATIVE=true to generate; Likelihood/Impact/Risk Rating above are still real, computed values)_ |
+| Identity resolution | VPN | Low | Low | Low | _(narrative synthesis disabled for this run — set generate_narrative=True / ENABLE_RISK_ASSESSMENT_NARRATIVE=true to generate; Likelihood/Impact/Risk Rating above are still real, computed values)_ |
 
 ## Escalations this period
 
