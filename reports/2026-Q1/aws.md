@@ -1,6 +1,6 @@
 # Access Review — AWS — 2026-Q1
 
-**Report generated:** 2026-09-09T09:20:22.924311+00:00
+**Report generated:** 2026-09-09T11:00:12.635021+00:00
 **Data snapshot:** N/A (manual/local run)
 **Model:** Tier 1 (Orphaned, Dormant admin-level, Dormant ad-hoc, Unapproved, Drift): plain Python, no model call (ADR-0006). Tier 2 (Identity resolution): claude-haiku-4-5-20251001 via the Agent SDK.
 **Reporting period:** 2026-Q1
@@ -13,13 +13,13 @@ One of these is generated per Information System (AWS, GitHub, Salesforce, Finan
 
 | Category | Open | Remediated | Accepted risk | Total |
 | :-- | --: | --: | --: | --: |
-| Orphaned access | 1 | 2 | 0 | 3 |
+| Orphaned access | 0 | 2 | 1 | 3 |
 | Dormant admin-level access | 0 | 0 | 1 | 1 |
 | Unapproved access | 0 | 1 | 0 | 1 |
 | Identity resolution | 0 | 0 | 0 | 0 |
-| Drift | 1 | 0 | 0 | 1 |
+| Drift | 0 | 1 | 0 | 1 |
 | Dormant ad-hoc access | 0 | 0 | 0 | 0 |
-| **Total** | 2 | 3 | 1 | 6 |
+| **Total** | 0 | 4 | 2 | 6 |
 
 ## Findings
 
@@ -27,9 +27,9 @@ One of these is generated per Information System (AWS, GitHub, Salesforce, Finan
 
 | Identity | Access detail | Expected per policy | Date detected | Time to revoke | Status | Issue |
 | :-- | :-- | :-- | :-- | :-- | :-- | :-- |
-| Alex Rivera | `write` access to aws | None (terminated 2026-08-01) | 2026-09-09 | same day as detection (Orphaned SLA — access-control-policy.md, Operational review) | Open | [#3](https://github.com/dotMR/access-review-agent-scratch/issues/3) |
+| Alex Rivera | `write` access to aws | None (terminated 2026-08-01) | 2026-09-09 | same day as detection (Orphaned SLA — access-control-policy.md, Operational review) | Remediated | [#3](https://github.com/dotMR/access-review-agent-scratch/issues/3) |
 | Alex Rivera | write access to aws | None (terminated 2026-08-01) | 2026-09-08 | same day as detection (Orphaned SLA — access-control-policy.md, Operational review) | Remediated | [#2](https://github.com/dotMR/access-review-agent-scratch/issues/2) |
-| Alex Rivera | write access to aws | None (terminated 2026-08-01) | 2026-09-08 | same day as detection (Orphaned SLA — access-control-policy.md, Operational review) | Remediated | [#1](https://github.com/dotMR/access-review-agent-scratch/issues/1) |
+| Alex Rivera | write access to aws | None (terminated 2026-08-01) | 2026-09-08 | same day as detection (Orphaned SLA — access-control-policy.md, Operational review) | Accepted risk | [#1](https://github.com/dotMR/access-review-agent-scratch/issues/1) |
 
 ### Dormant admin-level access (90-day threshold)
 
@@ -53,7 +53,7 @@ One of these is generated per Information System (AWS, GitHub, Salesforce, Finan
 
 | Identity | Access detail | Expected per policy | Role changed | Status | Issue |
 | :-- | :-- | :-- | :-- | :-- | :-- |
-| Harriet Boone | `write` access to aws | 'admin' (baseline for current role 'Asset Owner') | `2026-07-01`: `Software Engineer` → `Asset Owner` | Open | [#6](https://github.com/dotMR/access-review-agent-scratch/issues/6) |
+| Harriet Boone | `write` access to aws | 'admin' (baseline for current role 'Asset Owner') | `2026-07-01`: `Software Engineer` → `Asset Owner` | Remediated | [#6](https://github.com/dotMR/access-review-agent-scratch/issues/6) |
 
 ### Dormant ad-hoc access (180-day threshold)
 
