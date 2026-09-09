@@ -1,4 +1,4 @@
 employee_id,system_name,access_level,granted_date,approved_by,last_used_date,status,provisioning_note
-E9304,github,admin,2026-09-09,auto (granted per role policy),2026-09-09,active,
+E9304,github,admin,2026-09-09,auto (granted per role policy),2026-06-06,active,
 svc-cicd-deploy,github,write,2025-11-02,auto (granted per role policy),2026-09-09,active,"Provisioned for CI/CD pipeline automation, 2025-11-02. Accountable owner: Cecilia Tisio (Platform Engineering), contact for renewal or decommission."
 E9307,github,write,2026-09-09,auto (granted per role policy),2026-09-09,active,
