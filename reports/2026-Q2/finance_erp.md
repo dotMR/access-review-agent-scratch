@@ -1,6 +1,6 @@
 # Access Review — Finance ERP — 2026-Q2
 
-**Report generated:** 2026-09-10T07:14:14.307194+00:00
+**Report generated:** 2026-09-10T07:55:06.176776+00:00
 **Data snapshot:** N/A (manual/local run)
 **Model:** Tier 1 (Orphaned, Dormant admin-level, Dormant ad-hoc, Unapproved, Drift): plain Python, no model call (ADR-0006). Tier 2 (Identity resolution): claude-haiku-4-5-20251001 via the Agent SDK.
 **Reporting period:** 2026-Q2
@@ -13,13 +13,13 @@ One of these is generated per Information System (AWS, GitHub, Salesforce, Finan
 
 | Category | Open | Remediated | Accepted risk | Total |
 | :-- | --: | --: | --: | --: |
-| Orphaned access | 0 | 1 | 0 | 1 |
+| Orphaned access | 0 | 0 | 0 | 0 |
 | Dormant admin-level access | 1 | 1 | 0 | 2 |
 | Unapproved access | 0 | 0 | 0 | 0 |
 | Identity resolution | 0 | 0 | 0 | 0 |
 | Drift | 0 | 0 | 0 | 0 |
 | Dormant ad-hoc access | 0 | 0 | 0 | 0 |
-| **Total** | 1 | 2 | 0 | 3 |
+| **Total** | 1 | 1 | 0 | 2 |
 
 ## Findings
 
@@ -27,7 +27,7 @@ One of these is generated per Information System (AWS, GitHub, Salesforce, Finan
 
 | Identity | Access detail | Expected per policy | Date detected | Time to revoke | Status | Issue |
 | :-- | :-- | :-- | :-- | :-- | :-- | :-- |
-| Glenallen Mixon | `write` access to finance_erp | None (terminated 2026-09-09) | 2026-09-09 | same day as detection (Orphaned SLA — access-control-policy.md, Operational review) | Remediated | [#21](https://github.com/dotMR/access-review-agent-scratch/issues/21) |
+| No findings | | | | | | |
 
 ### Dormant admin-level access (90-day threshold)
 
