@@ -13,7 +13,7 @@ This is the formal audit-evidence record for the period, the rollup of the five 
 
 ## Executive summary
 
-20 findings identified this quarter across 6 finding categories and 5 Information Systems. 11 remediated, 6 open, 3 accepted as risk. N/A, no prior period
+20 findings identified this quarter across 6 finding categories and 5 Information Systems. 11 remediated, 6 open, 3 accepted as risk. 20 finding(s) this quarter vs. 8 last quarter (+12)
 
 ## Methodology
 
