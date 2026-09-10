@@ -1,6 +1,6 @@
 # Quarterly Access Review Audit Report — 2026-Q2
 
-**Report generated:** 2026-09-10T07:14:14.307194+00:00
+**Report generated:** 2026-09-10T07:55:06.176776+00:00
 **Data snapshot:** N/A (manual/local run)
 **Model:** Tier 1 (Orphaned, Dormant admin-level, Dormant ad-hoc, Unapproved, Drift): plain Python, no model call (ADR-0006). Tier 2 (Identity resolution): claude-haiku-4-5-20251001 via the Agent SDK.
 **Reporting period:** 2026-Q2
@@ -13,7 +13,7 @@ This is the formal audit-evidence record for the period, the rollup of the five 
 
 ## Executive summary
 
-21 findings identified this quarter across 6 finding categories and 5 Information Systems. 12 remediated, 6 open, 3 accepted as risk. N/A, no prior period
+20 findings identified this quarter across 6 finding categories and 5 Information Systems. 11 remediated, 6 open, 3 accepted as risk. N/A, no prior period
 
 ## Methodology
 
@@ -26,15 +26,15 @@ The Access Review Agent performed an automated cross-reference of each Informati
 | AWS | 2 | 5 | 2 | 9 | [aws.md](./aws.md) |
 | GitHub | 2 | 0 | 0 | 2 | [github.md](./github.md) |
 | Salesforce | 1 | 1 | 0 | 2 | [salesforce.md](./salesforce.md) |
-| Finance ERP | 1 | 2 | 0 | 3 | [finance-erp.md](./finance-erp.md) |
+| Finance ERP | 1 | 1 | 0 | 2 | [finance-erp.md](./finance-erp.md) |
 | VPN | 0 | 4 | 1 | 5 | [vpn.md](./vpn.md) |
-| **Total** | 6 | 12 | 3 | 21 | |
+| **Total** | 6 | 11 | 3 | 20 | |
 
 ## Findings by category (aggregate)
 
 | Category | Open | Remediated | Accepted risk | Total |
 | :-- | --: | --: | --: | --: |
-| Orphaned access | 0 | 4 | 1 | 5 |
+| Orphaned access | 0 | 3 | 1 | 4 |
 | Dormant admin-level access | 2 | 1 | 1 | 4 |
 | Unapproved access | 1 | 1 | 0 | 2 |
 | Identity resolution | 1 | 4 | 1 | 6 |
@@ -47,23 +47,21 @@ Line-item detail for every finding lives in the per-system reports linked above 
 
 | Category | System | Likelihood | Impact | Risk Rating | Narrative & treatment recommendation |
 | :-- | :-- | :-- | :-- | :-- | :-- |
-| Drift | AWS | Medium | Medium | Medium | Issue &#35;6 (Harriet Boone) appeared across consecutive audits but has been remediated, indicating effective prior corrective action. Issue &#35;16 (Karl Dandleton) is an isolated finding appearing only in this audit cycle. No process-level treatment action is warranted, as the previously recurring exposure has been resolved and the current finding has not yet demonstrated persistence across multiple audit periods. |
-| Unapproved access | AWS | Medium | Medium | Medium | Issue &#35;5 (Luis Ferreira) represents a recurring pattern, appearing across two consecutive audits before being remediated. Issue &#35;15 (Mike Truk) is an isolated, newly identified finding that remains open. Since the recurring concern has been resolved through remediation and the current issue is a one-time occurrence, no process-level treatment intervention is warranted. |
-| Orphaned access | AWS | Medium | Medium | Medium | Orphaned AWS access demonstrates a recurring pattern, with issues &#35;3, &#35;2, and &#35;1 each open across two consecutive audits. While &#35;3 and &#35;2 have been remediated, &#35;1 remains as an accepted risk, and issue &#35;14 appears isolated to this audit. Process-level improvements to AWS access de-provisioning procedures are warranted to address this recurring pattern. |
-| Dormant admin-level access | AWS | Medium | High | High | The dormant-admin pattern in AWS represents a recurring risk exposure, with Issue &#35;4 persisting as an accepted-risk finding across the prior audit and this quarter's review. Given the high impact of unmonitored administrative credentials against a medium likelihood of exploitation, this sustained gap warrants formalization of compensating controls: establish a quarterly attestation process requiring AWS account owners to certify the business justification for dormant admin roles, or commit to their removal within a defined remediation window. Until the underlying access rationalization is completed, documented acceptance and active monitoring should replace passive acceptance across consecutive quarters. |
-| Identity resolution | GitHub | Low | Medium | Low | Issue &#35;18 on the GitHub system represents an isolated identity-resolution finding, present only in this current audit with no evidence of recurrence. As this is a one-time incident rather than a recurring pattern, no process-level treatment action is recommended. The finding should be closed through standard operational procedures. |
-| Dormant admin-level access | GitHub | Low | Medium | Low | Issue &#35;17 appears as a new finding in the current audit period, representing an isolated occurrence rather than a persistent pattern across multiple audits. The dormant-admin access on github carries a low overall risk rating, combining low likelihood with medium potential impact. Standard monitoring through the regular audit cycle is sufficient; no escalated remediation process is warranted for this one-off finding. |
-| Dormant ad-hoc access | Salesforce | Low | Low | Low | The Salesforce dormant ad-hoc access risk remains isolated to this audit cycle, with no recurring pattern established. Issue &#35;13 has been remediated, while Issue &#35;9 remains open but does not yet demonstrate persistence across multiple audits necessary for systemic process treatment. Monitor Issue &#35;9 for closure in the next audit; if it persists into a second consecutive audit, escalate to process-level review. No recurring treatment action is warranted at this time. |
-| Orphaned access | Finance ERP | Low | High | Medium | **Orphaned access in finance_erp** is a high-impact risk mitigated by low frequency. Issue &#35;21 (Glenallen Mixon) represents an isolated occurrence, appearing and resolving within a single audit cycle. The remediation is complete and no recurring pattern is evident. No process-level action is warranted at this time; standard monitoring should confirm the issue does not resurface. |
-| Dormant admin-level access | Finance ERP | Low | High | Medium | This category shows two findings from the current audit cycle with no recurring pattern: Issue &#35;11 has been remediated, while Issue &#35;10 remains open. Since neither finding spans multiple consecutive audits, this represents an isolated set of issues rather than a systemic control concern and does not warrant process-level remediation recommendation at this time. |
-| Identity resolution | VPN | Medium | Low | Low | Identity-resolution findings in the VPN environment are predominantly isolated; issues &#35;20, &#35;19, and &#35;12 were remediated or risk-accepted within this audit cycle. Issues &#35;8 and &#35;7 (svc-billing-sync), however, recur across 2 consecutive audits despite remediation status, indicating a persistent gap in the identity-sync mechanism. Process-level review of the billing-sync integration control logic and identity enrichment validation is warranted to prevent further recurrence. |
+| Drift | AWS | Medium | Medium | Medium | AWS drift issues show a pattern of resolution followed by emergence. Issue &#35;6 recurred across prior audit cycles but has been successfully remediated, demonstrating closure of a persistent control gap. Issue &#35;16 is a newly surfaced isolated finding. No process-level treatment action is warranted, as the recurring issue has been addressed and the current finding does not yet establish a recurring pattern. |
+| Unapproved access | AWS | Medium | Medium | Medium | This unapproved access risk for AWS is represented by two distinct issues: &#35;5, which was open across two consecutive prior audits but has since been remediated, and &#35;15, newly surfaced in this audit. The successful remediation of &#35;5 addresses the previously recurring approval gap. &#35;15 remains isolated to this single audit, so no process-level treatment recommendation is warranted at this time. |
+| Orphaned access | AWS | Medium | Medium | Medium | Orphaned AWS resources demonstrate a recurring pattern, with Issues &#35;3, &#35;2, and &#35;1 each appearing across 2 consecutive audits; Issue &#35;14 is an isolated one-time remediation within this audit cycle. The multi-audit presence of &#35;3 and &#35;2 (both now remediated) and the ongoing status of &#35;1 (accepted as an open risk) indicate systematic gaps in resource lifecycle management or orphan detection. Process-level improvements to AWS resource governance—such as enhanced inventory controls, automated orphan detection, or enforced lifecycle tagging—are warranted to interrupt this recurring pattern. |
+| Dormant admin-level access | AWS | Medium | High | High | Issue &#35;4 reflects a recurring pattern of dormant administrative access on AWS that has persisted across two consecutive audits. While formally accepted as risk, the continuation across audit cycles indicates this exposure warrants a process-level response beyond one-time acceptance. A defined remediation roadmap with specific deprovisioning targets—or, if risk acceptance remains justified, an annually-refreshed control review with documented compensating measures—should be established to manage the High risk rating through active monitoring rather than passive acceptance. |
+| Identity resolution | GitHub | Low | Medium | Low | Issue &#35;18 (svc-cicd-deploy) represents an isolated identity-resolution gap on github, appearing only in the current audit cycle. Without evidence of persistence across multiple audits, no process-level treatment is indicated. Standard operational remediation of this access anomaly will suffice to resolve the risk. |
+| Dormant admin-level access | GitHub | Low | Medium | Low | The dormant-admin/github pairing presents a Low overall risk rating, reflecting low likelihood of unauthorized access despite medium potential impact. Issue &#35;17 remains open but constitutes an isolated finding within the current audit cycle, with no established recurrence pattern across consecutive reviews. Process-level treatment is not warranted at this stage given the absence of recurring findings. |
+| Dormant ad-hoc access | Salesforce | Low | Low | Low | Both findings in this row are isolated to the current audit: Issue &#35;13 has already been remediated, and Issue &#35;9 is open but appears for the first time this cycle. With neither issue spanning multiple consecutive audits, there is no recurring pattern to trigger process-level treatment actions. The isolated status of these findings, combined with the Low risk rating, indicates that standard operational closure of Issue &#35;9 is the appropriate response without systemic control intervention. |
+| Dormant admin-level access | Finance ERP | Low | High | Medium | The dormant-admin access risk in finance_erp presents a mixed picture. Issue &#35;11 was identified and remediated within this audit cycle, while Issue &#35;10 remains open and represents a newly surfaced concern. Both findings are isolated to a single audit period, indicating neither has established a recurring pattern. Given the lack of persistence across consecutive audits, address Issue &#35;10's remediation directly rather than implementing process-level controls at this time; monitor whether similar issues emerge in the next review cycle. |
+| Identity resolution | VPN | Medium | Low | Low | Most identity-resolution issues affecting VPN are isolated: &#35;20 and &#35;19 were both remediated within this audit cycle, while &#35;12 represents an accepted risk decision contained to the current period. However, the billing-sync integration exhibits a recurring pattern, with &#35;8 and &#35;7 appearing across two consecutive audits despite remediation efforts. This persistence suggests the underlying synchronization workflow is not stable; a process-level review of svc-billing-sync identity-resolution logic should be prioritized to prevent further recurrence in future audits. |
 
 ## Escalations this period
 
-_Not yet implemented — lands in Milestone 9. No rows below are a real computation._
-
 | Finding | System | Category | Open since | Escalated | Issue |
 | :-- | :-- | :-- | :-- | :-- | :-- |
+| No escalations this period | | | | | |
 
 ## Reviewer attestation
 
