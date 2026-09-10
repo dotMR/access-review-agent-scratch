@@ -120,12 +120,9 @@ def summary_counts(issues: list[IssueInfo]) -> dict[str, int]:
     `issues` - total/remediated/open/accepted_risk are shared by
     build_aggregate_report's Executive Summary and the quarterly Release
     body (SPEC.md §6), so those numbers can never drift apart from each
-    other. `escalated` is a whole-tracker count (any Issue currently
-    carrying the label, any period) - NOT what the Release body uses for
-    its own escalation count; see count_escalations_this_period for that
-    (period-filtered, parsed back from the aggregate report's own
-    Escalations-this-period table, same "can't drift" discipline applied
-    to a number that a whole-tracker count can't correctly express).
+    other. `escalated` is a whole-tracker count, any period - NOT what
+    the Release body uses for its own escalation count, see
+    count_escalations_this_period for that.
     """
     return {
         "total": len(issues),
@@ -444,11 +441,9 @@ def build_aggregate_report(
 
     `escalated_rows`, when given, is a list of {finding, system,
     category, open_since, escalated_at, issue_number, issue_url} dicts
-    (Milestone 9) — one per Issue whose escalation happened within this
-    period specifically (generate_quarterly_reports filters on that via
-    risk_assessment.period_bounds, since the escalated label itself
-    persists for an Issue's whole remaining life once applied - ADR-0005).
-    None renders the same "not provided for this call" placeholder as
+    (Milestone 9) — one per Issue that escalated within this period
+    specifically, per generate_quarterly_reports's own filtering. None
+    renders the same "not provided for this call" placeholder as
     risk_assessment_rows; an empty list renders "no escalations this
     period" instead, since that's a real computed result, not a gap.
     """

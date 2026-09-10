@@ -190,13 +190,8 @@ async def run_full_reconciliation(
                 rejected.append({"finding": finding, "reason": str(e)})
                 continue
             except Exception as e:
-                # A real GitHub write failure (rate limit, network, 5xx,
-                # auth) - isolated to this ONE finding, not the whole
-                # system's run. Same fail-loud-completeness discipline
-                # already applied to bad source data and identity-
-                # resolution failures above: a transient API error while
-                # writing shouldn't have a bigger blast radius than a
-                # malformed input file does.
+                # A real write failure, isolated to this one finding - see
+                # this function's own docstring.
                 print(f"::error::{system_name} failed to open Issue for a finding: {e}")
                 write_failed.append({"finding": finding, "reason": str(e)})
                 continue

@@ -108,10 +108,8 @@ def period_bounds(period: str) -> tuple[str, str]:
     """[start, end) ISO date strings for a "YYYY-Qn" period - the
     quarter's first day and the day after its last, so a timestamp string
     comparison (start <= ts < end) is enough to place a moment inside or
-    outside it. Used by generate_quarterly_reports to decide which
-    escalations happened *this* period, not just which Issues currently
-    carry the escalated label (a label that, once applied, persists for
-    the Issue's whole remaining life - ADR-0005's "fires once").
+    outside it. Used by generate_quarterly_reports's Escalations-this-
+    period filtering - see that function's own docstring for why.
     """
     year_str, q_str = period.split("-Q")
     year, quarter = int(year_str), int(q_str)
