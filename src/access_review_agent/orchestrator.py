@@ -25,6 +25,7 @@ from access_review_agent.github.adapter import (
     ReleaseResult,
     ReportCommitResult,
     get_adapter,
+    get_escalation_comment_date,
     list_issues,
 )
 from access_review_agent.detection.identity_resolution import detect_identity_resolution
@@ -45,11 +46,12 @@ from access_review_agent.reports import (
     build_monthly_report,
     build_per_system_report,
     category_of,
+    parse_issue_title,
     source_employee_id,
     summary_counts,
     system_of,
 )
-from access_review_agent.risk_assessment import build_risk_assessment_entries
+from access_review_agent.risk_assessment import build_risk_assessment_entries, period_bounds
 from access_review_agent.tools.policy import DEFAULT_ROLE_ACCESS_MAPPING_PATH, read_policy
 from access_review_agent.units import SYSTEMS, SystemDetectionUnit
 
@@ -69,116 +71,64 @@ async def run_full_reconciliation(
     permalink (Milestone 5) - passed straight through to open_issue.
 
     Identity resolution runs per system, same as every Tier 1 category -
-    SystemDetectionUnit.detect_all() stays Tier-1-only and synchronous by
-    design (ADR-0006's split point), so this async function is what adds
-    Identity resolution's findings on top, not the unit itself. Cheap when
-    there's nothing to resolve: find_unresolved_candidates() is plain
-    Python and detect_identity_resolution() returns immediately with no
-    Agent SDK call at all if it finds zero candidates - the eval fixtures
-    every CI-wired milestone script runs against have none, so this
-    doesn't turn any of those free/local suites into a paid one.
+    SystemDetectionUnit.detect_all() stays Tier-1-only and synchronous
+    (ADR-0006's split point); this async function adds Identity
+    resolution's findings on top. Cheap when there's nothing to resolve:
+    detect_identity_resolution() makes no Agent SDK call at all if it
+    finds zero candidates, so the credential-free eval fixtures stay free.
 
-    Also runs Escalation/Accepted-Risk lifecycle checks (Milestone 9,
-    ADR-0005) over EVERY currently-open Issue, unconditionally - never
-    scoped to just `systems`. Escalation's same-day SLA timing shouldn't
-    depend on which system happened to get a commit today, and this
-    cross-system bookkeeping is what the main agent (the sole holder of
-    GitHub write tools) is for, not something detection units do.
+    check_lifecycle gates three things on one `list_issues` read, all
+    needing real Issue data a credential-free eval run can't provide:
+    Escalation/Accepted-Risk lifecycle checks (Milestone 9, ADR-0005, run
+    unconditionally over every open Issue, never scoped to `systems` -
+    Escalation's same-day SLA shouldn't depend on which system got a
+    commit today); duplicate-Issue prevention (passed to open_issue as
+    `skip_reopen_keys` - see its own docstring for the key and why);
+    and Remediation re-check (SPEC.md §8's "remediation re-check/
+    auto-close," iam-review-agent-design.md's "Closing the loop" -
+    close_remediated_issues, called once per system with that system's
+    own just-detected `findings`, since only fresh per-system detection
+    can know whether a finding is still true - unlike the other two
+    checks, which only need Issue metadata). False skips all three;
+    every CI-wired eval suite passes False and is unaffected.
 
-    `check_lifecycle=False` skips that pass entirely - list_issues is a
-    real read that needs a valid token even against a private repo
-    (unauthenticated reads 404, they don't just see less), unlike
-    open_issue's write side, which dry-run mode already makes network-
-    free. Milestones 1-5's eval suites run credential-free in CI by
-    design; they pass False here since Milestone 9's lifecycle logic
-    already has its own dedicated, credential-free test coverage
-    (scripts/run_milestone9.py) and doesn't need re-exercising through
-    every other milestone's detection tests too.
+    Per-system failure isolation (SPEC.md §7, Milestone 11): a malformed
+    source file for one system doesn't abort the run - that system's
+    entry gets "failed" set to a loud, specific reason, every other
+    system still completes. Only FileNotFoundError/ValueError are caught
+    for detection (the two real "bad source data" exceptions
+    read_and_validate raises); Identity resolution's own try/except below
+    is deliberately broader, since a live Agent SDK call's failure
+    surface isn't just bad data - anything uncaught is a genuine bug and
+    should still crash loudly.
 
-    The same list_issues read also powers duplicate-Issue prevention:
-    every OPEN Issue's, plus every CLOSED accepted-risk Issue's,
-    (category, system_name, employee_id) - the real unique key, not the
-    rendered title, see open_issue's own docstring for why either part
-    of that set matters - is passed to open_issue, which skips creating
-    a new one for any finding whose key already matches. Found live
-    during Milestone 12's scratch-repo trial, not designed in
-    speculatively, in two stages (open_issue's docstring has the full
-    story): first, a push touching system_hr.csv/policy-config.yaml/
-    role-access-mapping.yaml fans out to all five systems (dispatch.py)
-    and re-detects every already-known, still-open finding right along
-    with anything genuinely new; second, an accepted-risk finding's
-    Issue being CLOSED meant open-only checking had no memory of it
-    either, re-opening a finding a human had already formally reviewed.
-    Reuses the SAME list_issues call the lifecycle
-    pass below already needed, rather than a second fetch - safe to
-    fetch once, before detection runs rather than after, because neither
-    lifecycle check can ever act on an Issue this same run just opened
-    (escalate_overdue_issues requires days_open > sla_days, impossible
-    for an Issue created today; close_accepted_risk_issues requires the
-    accepted-risk label, never set at creation time) - so which side of
-    detection the fetch happens on changes nothing lifecycle-side.
-    check_lifecycle=False skips dedup too, for the same credential-free
-    reasoning above; every eval suite's opened-Issue counts are
-    unaffected since none of their fixtures pass True.
-
-    Also runs Remediation re-check (SPEC.md §8, iam-review-agent-
-    design.md's "Closing the loop") per system, right after that
-    system's own findings are computed: close_remediated_issues closes
-    any of that system's open Issues whose finding is no longer among
-    `findings` - the access was genuinely fixed, not just an Issue closed
-    by hand. Unlike Escalation/Accepted-Risk below, this needs fresh
-    per-system detection data to know "is this still true," not just
-    Issue metadata, so it's called once per system inside this loop, not
-    unconditionally afterward. A real, previously-missing capability -
-    found live during Milestone 12's scratch-repo trial (an Orphaned
-    Issue stayed open after its access was genuinely revoked in the seed
-    data), not designed in speculatively; also gated by check_lifecycle
-    for the same reason as dedup.
-
-    Per-system failure isolation (SPEC.md §7's fail-loud completeness,
-    Milestone 11): a malformed source file for one system (missing
-    columns, same-file consistency mismatch, a missing file entirely)
-    doesn't abort the whole run - that system's entry gets "failed" set
-    to a loud, specific reason, and every other system still completes
-    and reports normally. Only FileNotFoundError/ValueError are caught
-    here (the two real "bad source data" exceptions read_and_validate
-    raises) - anything else is a genuine bug, not a data problem, and
-    should still crash loudly rather than being silently absorbed.
+    The write path gets the same isolation, at finding granularity: a
+    real GitHub failure (rate limit, network, 5xx, auth) opening one
+    Issue is caught and recorded in "write_failed" rather than aborting
+    the rest of that system's findings - previously only GroundingError
+    was caught here, so a transient API blip had a bigger blast radius
+    than a malformed input file did. lifecycle.py's own write loops
+    (close_accepted_risk_issues, escalate_overdue_issues,
+    close_remediated_issues) isolate the same way, per Issue.
 
     Returns {"systems": {<system_name>: {detected, opened, rejected,
-    skipped_existing, remediated_closed, failed}}, "lifecycle": {
-    accepted_risk_closed, escalated} | None} - two clearly separate
-    shapes under their own
-    keys, not flattened together, so a caller iterating per-system
-    results can't accidentally trip over the differently-shaped
-    lifecycle entry.
+    skipped_existing, remediated_closed, write_failed, failed}},
+    "lifecycle": {accepted_risk_closed, escalated} | None} - kept as two
+    separate shapes so a caller can't conflate a per-system result with
+    the cross-system lifecycle one.
     """
     all_issues = list_issues(repo_full_name) if check_lifecycle else None
     skip_reopen_keys = None
     if all_issues is not None:
-        # (category, system_name, employee_id) - the finding's own real
-        # unique key (open_issue's own docstring explains why not the
-        # rendered title). A malformed/older Issue that doesn't parse
-        # cleanly (no recognized category label, or a body predating
-        # _format_body's Source record line) is simply not included here -
-        # worst case it risks one future duplicate for that one Issue, not
-        # a crash, and every Issue this system itself ever writes always
-        # parses cleanly by construction.
-        #
-        # Includes every OPEN Issue's key (still-unresolved, don't
-        # duplicate) AND every CLOSED accepted-risk Issue's key too -
-        # found live during Milestone 12's scratch-repo trial: dedup
-        # originally only checked open Issues, so a still-genuinely-
-        # detected finding whose Issue had been formally closed as
-        # accepted-risk (Milestone 9) got treated as brand new on the
-        # very next run and re-opened - directly contradicting
-        # iam-review-agent-design.md's Accepted Risk section ("No expiry
-        # in v1: the underlying condition is never periodically
-        # re-reviewed or re-surfaced once accepted"). A REMEDIATED
-        # closure is deliberately NOT included here - unlike accepted
-        # risk, a fixed-then-later-recurring finding is a genuinely new
-        # instance of the problem and should open a fresh Issue, not be
-        # suppressed forever.
+        # Every OPEN Issue's key, plus every CLOSED accepted-risk Issue's -
+        # accepted risk has no expiry (iam-review-agent-design.md), so a
+        # still-detected finding whose Issue was formally accepted must
+        # stay suppressed even after closing. A REMEDIATED closure is
+        # deliberately excluded: a fixed-then-later-recurring finding is
+        # a new instance of the problem, not something to suppress
+        # forever. An Issue that doesn't parse cleanly (unrecognized
+        # category, or a body predating a format change) is just left
+        # out - risks one future duplicate, not a crash.
         skip_reopen_keys = {
             (category_of(i), system_of(i), source_employee_id(i))
             for i in all_issues
@@ -198,6 +148,7 @@ async def run_full_reconciliation(
                 "rejected": [],
                 "skipped_existing": [],
                 "remediated_closed": [],
+                "write_failed": [],
                 "failed": str(e),
             }
             continue
@@ -206,22 +157,16 @@ async def run_full_reconciliation(
             identity_result = await detect_identity_resolution(data_dir, system_name)
             findings = findings + identity_result["findings"]
         except Exception as e:
-            # Deliberately broader than the FileNotFoundError/ValueError
-            # catch above: Identity resolution's failure surface is a live
-            # Agent SDK call, not just local file parsing, so a transient
-            # network/API error is a realistic, non-"genuine bug" failure
-            # mode here in a way it isn't for Tier 1 - and it shouldn't
-            # crash the whole run any more than a malformed file does.
-            # Isolated at the same system granularity Milestone 11 already
-            # established, not partial-credited against the Tier 1
-            # findings just computed above - same all-or-nothing-per-
-            # system semantics as the block above, just a second cause.
+            # Broader catch than above on purpose - a live Agent SDK call's
+            # failure surface isn't just bad data. Same all-or-nothing
+            # per-system isolation, a second possible cause.
             systems_results[system_name] = {
                 "detected": 0,
                 "opened": [],
                 "rejected": [],
                 "skipped_existing": [],
                 "remediated_closed": [],
+                "write_failed": [],
                 "failed": f"Identity resolution failed: {e}",
             }
             continue
@@ -229,6 +174,7 @@ async def run_full_reconciliation(
         opened: list[IssueResult] = []
         rejected: list[dict[str, Any]] = []
         skipped_existing: list[dict[str, Any]] = []
+        write_failed: list[dict[str, Any]] = []
         for finding in findings:
             try:
                 result = open_issue(
@@ -238,16 +184,22 @@ async def run_full_reconciliation(
             except GroundingError as e:
                 rejected.append({"finding": finding, "reason": str(e)})
                 continue
+            except Exception as e:
+                # A real GitHub write failure (rate limit, network, 5xx,
+                # auth) - isolated to this ONE finding, not the whole
+                # system's run. Same fail-loud-completeness discipline
+                # already applied to bad source data and identity-
+                # resolution failures above: a transient API error while
+                # writing shouldn't have a bigger blast radius than a
+                # malformed input file does.
+                print(f"::error::{system_name} failed to open Issue for a finding: {e}")
+                write_failed.append({"finding": finding, "reason": str(e)})
+                continue
             if result is None:
                 skipped_existing.append(finding)
             else:
                 opened.append(result)
 
-        # Remediation re-check (SPEC.md §8, iam-review-agent-design.md's
-        # "Closing the loop"): only meaningful with real Issue data, same
-        # check_lifecycle gate as dedup above - and only using `findings`,
-        # this system's own just-computed detection, never another
-        # system's, per close_remediated_issues' own scoping.
         remediated_closed: list[int] = []
         if all_issues is not None:
             remediated_closed = close_remediated_issues(
@@ -260,24 +212,19 @@ async def run_full_reconciliation(
             "rejected": rejected,
             "skipped_existing": skipped_existing,
             "remediated_closed": remediated_closed,
+            "write_failed": write_failed,
             "failed": None,
         }
 
     lifecycle_results = None
     if check_lifecycle:
         adapter = get_adapter()
-        # all_issues is a snapshot from before the per-system loop above -
-        # any Issue close_remediated_issues just closed this same run is
-        # still "open" in it. Without filtering those out here,
-        # escalate_overdue_issues (which only reads Issue metadata, never
-        # re-fetches) would apply an escalated label/comment to something
-        # that's already been closed as remediated moments ago in the
-        # very same run - a real, reachable overlap: an Orphaned Issue a
-        # couple of days old, not yet escalated, whose access happens to
-        # get revoked in this same run. close_accepted_risk_issues can't
-        # hit this same overlap - close_remediated_issues unconditionally
-        # skips any accepted-risk-labeled Issue - but filtering here too
-        # is free and keeps this defensive, not order-dependent.
+        # all_issues predates the per-system loop above, so an Issue
+        # close_remediated_issues just closed this run still reads "open"
+        # here - filter it out, or escalate_overdue_issues could apply an
+        # escalated label to something already closed moments ago (e.g.
+        # an Orphaned Issue a few days old, not yet escalated, whose
+        # access got revoked in this same run).
         remediated_this_run = {
             number for summary in systems_results.values() for number in summary["remediated_closed"]
         }
@@ -320,6 +267,8 @@ async def generate_monthly_reports(
             # and visible, but the monthly report for every OTHER system
             # still gets built and committed below regardless.
             print(f"::error::{system_name} FAILED: {summary['failed']}")
+        for failure in summary["write_failed"]:
+            print(f"::error::{system_name} failed to open Issue for a finding: {failure['reason']}")
 
     all_issues = list_issues(repo_full_name)
     generated_at = datetime.now(timezone.utc).isoformat()
@@ -351,10 +300,10 @@ def _build_release_payload(
     period: str, report_contents: dict[str, str], all_issues: list
 ) -> tuple[str, str, dict[str, bytes]]:
     """(title, body, assets) for the quarterly Release (SPEC.md §6) -
-    shared by generate_quarterly_reports (single-shot, no gate - manual/
-    testing use) and create_quarterly_release (the real two-job,
-    human-in-the-loop path, Milestone 11), so the two can't drift apart.
-    `report_contents` must have all five system names plus "aggregate".
+    used by create_quarterly_release, kept as its own function so the
+    payload-building logic stays separate from that function's own
+    file-reading/tagging concerns. `report_contents` must have all five
+    system names plus "aggregate".
     """
     year, quarter = period.split("-Q")
     counts = summary_counts(all_issues)
@@ -383,11 +332,10 @@ def create_quarterly_release(repo_full_name: str, period: str, checkout_dir: Pat
     redundant set of commit_report calls that would otherwise create
     duplicate no-op commits.
 
-    Tags whatever commit `checkout_dir` is currently at - the caller
-    (scripts/create_quarterly_release.py) resolves that via `git
-    rev-parse HEAD` after its own checkout, since the workflow-trigger-
-    time `github.sha` context value predates the report-generation job's
-    commits and would tag the wrong commit.
+    Tags whatever commit `checkout_dir` is currently at, resolved here
+    via `git rev-parse HEAD` against that checkout, since the workflow-
+    trigger-time `github.sha` context value predates the report-
+    generation job's commits and would tag the wrong commit.
     """
     if not _PERIOD_RE.match(period):
         raise ValueError(f"period must match YYYY-Qn (e.g. 2026-Q1), got: {period!r}")
@@ -419,8 +367,9 @@ async def generate_quarterly_reports(
     §2 — detection already happened via push-triggered runs throughout
     the quarter; this just reads and renders, no fresh detection) into
     the two evidentiary reports per system plus the aggregate, committing
-    all six via commit_report — the sole caller of commit_report, same
-    "main agent only" pattern as open_issue.
+    all six via commit_report - restricted to this module the same
+    "main agent only" way open_issue is (generate_monthly_reports is the
+    other caller, for the monthly report path).
 
     `period` becomes part of every committed file's path
     (`reports/{period}/...`) - validated strictly (YYYY-Qn) before it
@@ -439,6 +388,14 @@ async def generate_quarterly_reports(
     Risk Rating scores are still computed and shown either way (free,
     local); only the narrative text itself is skipped when False, with
     an explicit placeholder rather than a silent gap.
+
+    Also computes the aggregate report's "Escalations this period" table:
+    every Issue with the escalated label whose escalation comment (posted
+    by lifecycle.py's escalate_overdue_issues) falls within this period's
+    own date range (risk_assessment.period_bounds) - not just "currently
+    carries the label," since that label persists for an Issue's whole
+    remaining life once applied (ADR-0005's "fires once") and would
+    otherwise re-appear in every subsequent quarter's report forever.
 
     Does NOT create the Release - see create_quarterly_release for that
     (Milestone 11 split it out deliberately so the human-in-the-loop
@@ -476,6 +433,27 @@ async def generate_quarterly_reports(
                 }
             )
 
+    period_start, period_end = period_bounds(period)
+    escalated_rows: list[dict[str, Any]] = []
+    for system_name in SYSTEM_ORDER:
+        for issue in per_system_issues[system_name]:
+            if "escalated" not in issue.labels:
+                continue
+            escalated_at = get_escalation_comment_date(repo_full_name, issue.number)
+            if escalated_at is None or not (period_start <= escalated_at < period_end):
+                continue  # escalated in a different period, or (shouldn't happen) no comment found
+            escalated_rows.append(
+                {
+                    "finding": parse_issue_title(issue.title),
+                    "system_name": system_name,
+                    "category": category_of(issue),
+                    "open_since": issue.created_at,
+                    "escalated_at": escalated_at,
+                    "issue_number": issue.number,
+                    "issue_url": issue.html_url,
+                }
+            )
+
     generated_at = datetime.now(timezone.utc).isoformat()
     adapter = get_adapter()
     results: dict[str, ReportCommitResult] = {}
@@ -492,7 +470,11 @@ async def generate_quarterly_reports(
         )
 
     aggregate_content = build_aggregate_report(
-        period, per_system_issues, generated_at, risk_assessment_rows=risk_assessment_rows
+        period,
+        per_system_issues,
+        generated_at,
+        risk_assessment_rows=risk_assessment_rows,
+        escalated_rows=escalated_rows,
     )
     report_contents["aggregate"] = aggregate_content
     results["aggregate"] = adapter.commit_report(

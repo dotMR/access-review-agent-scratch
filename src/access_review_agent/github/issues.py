@@ -6,9 +6,8 @@ the correct title/body/labels, and an ungrounded finding does not open
 one. A category is wired up here only once grounding.py has its own
 validator for it - adding a new category means adding its grounding
 check first, not the other way around (Milestone 3 added the four
-Tier 1 categories that came after Orphaned; Identity resolution and
-Drift's Tier 2 reasoning-based cousins are not in scope until
-Milestone 6 onward).
+Tier 1 categories that came after Orphaned; Identity resolution, the
+one Tier 2 category, wasn't in scope until Milestone 6).
 """
 
 from pathlib import Path
@@ -38,16 +37,12 @@ SYSTEM_DISPLAY_NAMES = {
 def _as_literal(value: str) -> str:
     """Render a CSV/HRIS-sourced free-text value as an inert Markdown code
     span rather than resumed prose. GitHub's Issue body renderer parses
-    @mentions, #issue-references, and every other bit of markdown syntax
-    from ordinary text but not from inside a code span - the same
-    protection the Source record line already relies on for the source
-    filename and employee_id. Fields like access_level, approved_by, and
-    role names are free text from external CSV data with no enforced
-    enum on the raw cell value (only the mapped/looked-up side is
-    validated), so a crafted value could otherwise trigger real
-    notifications or cross-issue links when the Issue is opened. A
-    literal backtick in the value itself would prematurely close the
-    span, so any backticks in the value are neutralized first.
+    @mentions and #issue-references from ordinary text but not from
+    inside a code span - fields like access_level/approved_by/role are
+    free text with no enforced enum on the raw value, so a crafted one
+    could otherwise trigger real notifications or cross-issue links. A
+    literal backtick in the value would prematurely close the span, so
+    backticks are neutralized first.
     """
     return f"`{value.replace('`', chr(0x27))}`"
 
@@ -99,10 +94,11 @@ def _format_body(finding: dict[str, Any], repo_full_name: str, commit_sha: str |
             )
 
     if commit_sha:
-        # data/ is production's fixed DATA_DIR convention (scripts/run_production.py) -
-        # the only caller that ever supplies commit_sha, so this coupling is narrow
-        # and documented rather than inferred. Eval/dry-run callers pass no SHA and
-        # get the plain bare-filename citation instead, matching their data_dir
+        # data/ is production's fixed DATA_DIR convention - both real callers that
+        # ever supply commit_sha (scripts/run_production.py, run_monthly_reports.py)
+        # read from that directory, so this coupling is narrow and documented rather
+        # than inferred. Eval/dry-run callers pass no SHA and get the plain
+        # bare-filename citation instead, matching their data_dir
         # (evals/cases/<case>/, not data/) - a permalink there would point nowhere.
         blob_url = f"https://github.com/{repo_full_name}/blob/{commit_sha}/data/{source['file']}"
         lines.append(
@@ -139,36 +135,17 @@ def open_issue(
     triggering commit SHA to supply; eval/dry-run callers leave it unset.
 
     `skip_reopen_keys`, when given, is the set of (category, system_name,
-    employee_id) - the finding's own genuine unique key, not its
-    rendered title - for every OPEN Issue plus every CLOSED
-    accepted-risk Issue. A finding whose key is in this set returns None
-    rather than opening a duplicate. Found live during Milestone 12's
-    scratch-repo trial, in two stages:
+    employee_id) for every currently-open Issue plus every closed
+    accepted-risk Issue (see run_full_reconciliation for why accepted-
+    risk is included). A finding whose key is already in this set
+    returns None instead of opening a duplicate.
 
-    1. A push touching system_hr.csv/policy-config.yaml/role-access-
-       mapping.yaml fans out to all five systems (dispatch.py) and
-       re-detects every already-known, still-open finding right along
-       with anything genuinely new - with nothing to recognize "already
-       open," every such push duplicated every one of them, indefinitely.
-    2. Open-only wasn't enough either: once a formally accepted-risk
-       finding's Issue is closed (Milestone 9), the underlying condition
-       is still genuinely detected every run (accepted risk isn't
-       remediation - nothing about the data changed), and with only
-       OPEN Issues checked, the very next run re-opened it as if brand
-       new - directly contradicting iam-review-agent-design.md's
-       Accepted Risk section ("No expiry in v1: the underlying condition
-       is never periodically re-reviewed or re-surfaced once accepted").
-       A REMEDIATED closure is deliberately excluded from this set - a
-       fixed-then-later-recurring finding is a genuinely new instance of
-       the problem, not something to suppress forever.
-
-    Deliberately NOT keyed on the rendered title (SPEC.md §4's "{Category}
-    — {identity} ({System})"), even though that's this system's usual
-    display key: `identity` is employee_name, a human display name, not
-    guaranteed unique the way employee_id is - two different employees
-    sharing a name would collide on title, silently swallowing a second,
-    genuinely distinct finding as "already reported." employee_id is
-    HRIS's actual primary key, so it's what dedup keys on instead.
+    Keyed on employee_id, not the rendered title (SPEC.md §4's
+    "{Category} — {identity} ({System})"): `identity` is employee_name,
+    a human display name, not guaranteed unique the way employee_id is -
+    two employees sharing a name would collide on title, silently
+    swallowing a second, distinct finding as "already reported."
+    employee_id is HRIS's actual primary key.
 
     None (the default) skips this check entirely - every caller before
     this fix, and every credential-free eval suite, behaves exactly as

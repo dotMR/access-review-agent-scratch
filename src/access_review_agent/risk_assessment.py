@@ -86,6 +86,26 @@ def previous_period(period: str) -> str:
     return f"{year}-Q{quarter - 1}"
 
 
+def period_bounds(period: str) -> tuple[str, str]:
+    """[start, end) ISO date strings for a "YYYY-Qn" period - the
+    quarter's first day and the day after its last, so a timestamp string
+    comparison (start <= ts < end) is enough to place a moment inside or
+    outside it. Used by generate_quarterly_reports to decide which
+    escalations happened *this* period, not just which Issues currently
+    carry the escalated label (a label that, once applied, persists for
+    the Issue's whole remaining life - ADR-0005's "fires once").
+    """
+    year_str, q_str = period.split("-Q")
+    year, quarter = int(year_str), int(q_str)
+    start_month = (quarter - 1) * 3 + 1
+    start = f"{year:04d}-{start_month:02d}-01"
+    if start_month == 10:
+        end = f"{year + 1:04d}-01-01"
+    else:
+        end = f"{year:04d}-{start_month + 3:02d}-01"
+    return start, end
+
+
 def count_consecutive_periods(
     issue_number: int,
     category: str,

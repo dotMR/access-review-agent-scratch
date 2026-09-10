@@ -60,10 +60,17 @@ async def main() -> None:
             f"{system_name}: {summary['detected']} detected, "
             f"{len(summary['opened'])} opened, {len(summary['rejected'])} rejected, "
             f"{len(summary['skipped_existing'])} already open, "
-            f"{len(summary['remediated_closed'])} remediated"
+            f"{len(summary['remediated_closed'])} remediated, "
+            f"{len(summary['write_failed'])} write failed"
         )
         for rejected in summary["rejected"]:
             print(f"  REJECTED (ungrounded): {rejected['reason']}")
+        for failure in summary["write_failed"]:
+            # A real finding that never got recorded as an Issue - loud,
+            # and marks the run failed, same as a system-level failure:
+            # an operator needs to know and likely re-run.
+            print(f"  WRITE FAILED: {failure['reason']}")
+            any_failed = True
 
     lifecycle = results["lifecycle"]
     print(

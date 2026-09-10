@@ -79,6 +79,12 @@ jobs:
       - name: Verify remediation re-check/auto-close
         run: uv run python scripts/verify_remediation_reclose.py
 
+      - name: Verify write-path failure isolation
+        run: uv run python scripts/verify_write_failure_isolation.py
+
+      - name: Verify Escalations-this-period reporting
+        run: uv run python scripts/verify_escalations_this_period.py
+
       # Milestones 6 (Identity resolution) and 8 (Risk Assessment
       # narrative + LLM-as-judge) are deliberately NOT run here. Both
       # need a real Agent SDK call, so unlike everything above, every run

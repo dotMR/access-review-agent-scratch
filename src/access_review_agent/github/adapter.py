@@ -261,6 +261,30 @@ def list_issues(repo_full_name: str, label: str | None = None) -> list[IssueInfo
     ]
 
 
+def get_escalation_comment_date(repo_full_name: str, issue_number: int) -> str | None:
+    """The escalation comment's own timestamp for one Issue - the real
+    "when did this escalate" moment, distinct from the Issue's created_at.
+    escalate_overdue_issues (lifecycle.py) posts a comment starting
+    "**Escalated:**" at escalation time; this reads that comment back.
+    None if the Issue has no such comment (shouldn't happen for an Issue
+    that carries the escalated label, but a caller filters on the label
+    first regardless).
+
+    Always a real API call, same "reading has no side effect to guard"
+    reasoning as list_issues - called only for Issues that already carry
+    the escalated label, so call volume stays low by construction
+    (ADR-0005's "fires once" keeps escalated Issues rare by design).
+    """
+    token = _resolve_token()
+    client = Github(auth=Auth.Token(token)) if token else Github()
+    repo = client.get_repo(repo_full_name)
+    issue = repo.get_issue(issue_number)
+    for comment in issue.get_comments():
+        if comment.body.startswith("**Escalated:**"):
+            return comment.created_at.isoformat()
+    return None
+
+
 def get_adapter() -> GitHubAdapter:
     """Select the adapter based on GITHUB_WRITE_MODE. Anything other than
     "real" (including unset) is dry-run - the safe default.

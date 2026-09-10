@@ -15,6 +15,12 @@ needs to know whether a finding is STILL true, which only this run's own
 fresh detection for that one system can answer - unlike the other two,
 it's necessarily scoped to one system per call, using that system's own
 just-computed findings, not list_issues alone.
+
+Every write in this file is isolated per Issue: a real GitHub failure
+(rate limit, network, 5xx, auth) acting on one Issue is caught and
+logged loudly rather than aborting the rest of the batch - previously
+nothing here caught anything, so one bad write killed every other
+Issue's lifecycle check in the same run too.
 """
 
 from datetime import date
@@ -37,7 +43,11 @@ def close_accepted_risk_issues(
     closed = []
     for issue in issues:
         if issue.state == "open" and "accepted-risk" in issue.labels:
-            adapter.close_issue(repo_full_name, issue.number)
+            try:
+                adapter.close_issue(repo_full_name, issue.number)
+            except Exception as e:
+                print(f"::error::Failed to close accepted-risk Issue #{issue.number}: {e}")
+                continue
             closed.append(issue.number)
     return closed
 
@@ -75,14 +85,21 @@ def escalate_overdue_issues(
         if days_open <= sla_days:
             continue
 
-        adapter.apply_label(repo_full_name, issue.number, "escalated")
-        adapter.add_comment(
-            repo_full_name,
-            issue.number,
-            f"**Escalated:** the same-day SLA for {CATEGORY_DISPLAY[category]} was missed "
-            f"(opened {created.isoformat()}, still open {days_open} day(s) later) — per "
-            "access-control-policy.md's Unremediated findings Principle.",
-        )
+        try:
+            adapter.apply_label(repo_full_name, issue.number, "escalated")
+            adapter.add_comment(
+                repo_full_name,
+                issue.number,
+                f"**Escalated:** the same-day SLA for {CATEGORY_DISPLAY[category]} was missed "
+                f"(opened {created.isoformat()}, still open {days_open} day(s) later) — per "
+                "access-control-policy.md's Unremediated findings Principle.",
+            )
+        except Exception as e:
+            # Both calls are treated as one unit - a failure between the
+            # label and the comment isn't a state worth continuing from,
+            # loud and skipped, same as a failure before either started.
+            print(f"::error::Failed to escalate Issue #{issue.number}: {e}")
+            continue
         escalated.append(issue.number)
     return escalated
 
@@ -95,29 +112,25 @@ def close_remediated_issues(
     open_issues: list[IssueInfo],
 ) -> list[int]:
     """Close every open Issue for `system_name` whose finding is no longer
-    present in `current_findings` - iam-review-agent-design.md's "Closing
-    the loop" section, SPEC.md §8's "remediation re-check/auto-close":
-    "each run compares currently-open findings/Issues against the current
-    data; anything no longer present...gets its Issue closed with a note,
-    not left dangling." A real, previously-missing capability - found live
-    during Milestone 12's scratch-repo trial (an Orphaned Issue stayed
-    open after the underlying access was genuinely revoked in the data),
-    not designed in speculatively; SPEC.md §8 already listed this as v1
-    Core scope, Milestone 9 built Escalation and Accepted Risk but never
-    this third lifecycle mechanic.
+    present in `current_findings` - SPEC.md §8's "remediation re-check/
+    auto-close," iam-review-agent-design.md's "Closing the loop": each
+    run compares currently-open findings against current data; anything
+    no longer present gets its Issue closed, not left dangling. A real,
+    previously-missing capability, caught live during Milestone 12's
+    scratch-repo trial (an Orphaned Issue stayed open after its access
+    was genuinely revoked in the data) - Milestone 9 built Escalation
+    and Accepted Risk but never this third lifecycle mechanic.
 
-    Deliberately scoped to one system per call, using that system's own
-    just-computed `current_findings` - unlike close_accepted_risk_issues/
-    escalate_overdue_issues above, this needs to know whether a finding
-    is STILL true, which only fresh detection for that one system can
-    answer, not Issue metadata alone. Call once per system inside the
-    same per-system loop that already computed `current_findings`, not
-    unconditionally across every system regardless of push scope.
+    Scoped to one system per call, using that system's own just-computed
+    `current_findings` - unlike the two functions above, which only need
+    Issue metadata, this needs to know whether a finding is STILL true,
+    which only fresh per-system detection can answer. Call once per
+    system inside the loop that computed `current_findings`, not
+    unconditionally across every system.
 
-    Skips any Issue carrying the accepted-risk label unconditionally -
-    that's close_accepted_risk_issues' exclusive path (a human decision,
-    not a re-detection outcome); closing it here too, with a "remediated"
-    comment, would misrepresent why it's actually closed.
+    Skips any Issue carrying accepted-risk unconditionally - that's
+    close_accepted_risk_issues' exclusive path (a human decision, not a
+    re-detection outcome); closing it here too would misrepresent why.
     """
     current_keys = {
         (f["category"], f["system_name"], f["source_record"]["employee_id"]) for f in current_findings
@@ -133,12 +146,16 @@ def close_remediated_issues(
         if (category, system_name, employee_id) in current_keys:
             continue  # still an open finding this run - not remediated
 
-        adapter.close_issue(repo_full_name, issue.number)
-        adapter.add_comment(
-            repo_full_name,
-            issue.number,
-            f"**Remediated:** {CATEGORY_DISPLAY[category]} is no longer present as of this "
-            "run's detection pass — closing automatically.",
-        )
+        try:
+            adapter.close_issue(repo_full_name, issue.number)
+            adapter.add_comment(
+                repo_full_name,
+                issue.number,
+                f"**Remediated:** {CATEGORY_DISPLAY[category]} is no longer present as of this "
+                "run's detection pass — closing automatically.",
+            )
+        except Exception as e:
+            print(f"::error::Failed to close remediated Issue #{issue.number}: {e}")
+            continue
         closed.append(issue.number)
     return closed
