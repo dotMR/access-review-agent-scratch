@@ -1,6 +1,6 @@
 # Access Review — Finance ERP — 2026-Q1
 
-**Report generated:** 2026-09-09T11:00:12.635021+00:00
+**Report generated:** 2026-09-10T07:37:04.764570+00:00
 **Data snapshot:** N/A (manual/local run)
 **Model:** Tier 1 (Orphaned, Dormant admin-level, Dormant ad-hoc, Unapproved, Drift): plain Python, no model call (ADR-0006). Tier 2 (Identity resolution): claude-haiku-4-5-20251001 via the Agent SDK.
 **Reporting period:** 2026-Q1
@@ -14,12 +14,12 @@ One of these is generated per Information System (AWS, GitHub, Salesforce, Finan
 | Category | Open | Remediated | Accepted risk | Total |
 | :-- | --: | --: | --: | --: |
 | Orphaned access | 0 | 0 | 0 | 0 |
-| Dormant admin-level access | 0 | 0 | 0 | 0 |
+| Dormant admin-level access | 1 | 1 | 0 | 2 |
 | Unapproved access | 0 | 0 | 0 | 0 |
 | Identity resolution | 0 | 0 | 0 | 0 |
 | Drift | 0 | 0 | 0 | 0 |
 | Dormant ad-hoc access | 0 | 0 | 0 | 0 |
-| **Total** | 0 | 0 | 0 | 0 |
+| **Total** | 1 | 1 | 0 | 2 |
 
 ## Findings
 
@@ -33,7 +33,8 @@ One of these is generated per Information System (AWS, GitHub, Salesforce, Finan
 
 | Identity | Access detail | Expected per policy | Last used | Days dormant | Status | Issue |
 | :-- | :-- | :-- | :-- | :-- | :-- | :-- |
-| No findings | | | | | | |
+| Dana Whitfield | `admin` access to finance_erp | Revoke if unused &gt; 90 consecutive days | 2026-04-22 | 140 | Remediated | [#11](https://github.com/dotMR/access-review-agent-scratch/issues/11) |
+| Dana Whitfield | `admin` access to finance_erp | Revoke if unused &gt; 90 consecutive days | 2026-04-22 | 140 | Open | [#10](https://github.com/dotMR/access-review-agent-scratch/issues/10) |
 
 ### Unapproved access
 
