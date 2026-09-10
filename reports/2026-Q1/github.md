@@ -1,6 +1,6 @@
 # Access Review — GitHub — 2026-Q1
 
-**Report generated:** 2026-09-09T11:00:12.635021+00:00
+**Report generated:** 2026-09-10T07:37:04.764570+00:00
 **Data snapshot:** N/A (manual/local run)
 **Model:** Tier 1 (Orphaned, Dormant admin-level, Dormant ad-hoc, Unapproved, Drift): plain Python, no model call (ADR-0006). Tier 2 (Identity resolution): claude-haiku-4-5-20251001 via the Agent SDK.
 **Reporting period:** 2026-Q1
@@ -14,12 +14,12 @@ One of these is generated per Information System (AWS, GitHub, Salesforce, Finan
 | Category | Open | Remediated | Accepted risk | Total |
 | :-- | --: | --: | --: | --: |
 | Orphaned access | 0 | 0 | 0 | 0 |
-| Dormant admin-level access | 0 | 0 | 0 | 0 |
+| Dormant admin-level access | 1 | 0 | 0 | 1 |
 | Unapproved access | 0 | 0 | 0 | 0 |
-| Identity resolution | 0 | 0 | 0 | 0 |
+| Identity resolution | 1 | 0 | 0 | 1 |
 | Drift | 0 | 0 | 0 | 0 |
 | Dormant ad-hoc access | 0 | 0 | 0 | 0 |
-| **Total** | 0 | 0 | 0 | 0 |
+| **Total** | 2 | 0 | 0 | 2 |
 
 ## Findings
 
@@ -33,7 +33,7 @@ One of these is generated per Information System (AWS, GitHub, Salesforce, Finan
 
 | Identity | Access detail | Expected per policy | Last used | Days dormant | Status | Issue |
 | :-- | :-- | :-- | :-- | :-- | :-- | :-- |
-| No findings | | | | | | |
+| Bobson Dugnutt | `admin` access to github | Revoke if unused &gt; 90 consecutive days | 2026-06-06 | 95 | Open | [#17](https://github.com/dotMR/access-review-agent-scratch/issues/17) |
 
 ### Unapproved access
 
@@ -45,7 +45,7 @@ One of these is generated per Information System (AWS, GitHub, Salesforce, Finan
 
 | Access record (`employee_id` or local identifier) | Access detail | Resolution | Evidence cited | Date detected | Status | Issue |
 | :-- | :-- | :-- | :-- | :-- | :-- | :-- |
-| No findings | | | | | | |
+| svc-cicd-deploy | `write` access to github | `stale-ownership` | `Service account provisioning note names 'Cecilia Tisio (Platform Engineering)' as accountable owner; Cecilia Tisio (E9301) is found in HRIS but has status 'terminated' as of 2026-09-09.` | 2026-09-09 | Open | [#18](https://github.com/dotMR/access-review-agent-scratch/issues/18) |
 
 ### Drift
 
