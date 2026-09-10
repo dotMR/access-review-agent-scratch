@@ -117,9 +117,15 @@ def source_employee_id(issue: IssueInfo) -> str | None:
 
 def summary_counts(issues: list[IssueInfo]) -> dict[str, int]:
     """Total/remediated/open/accepted-risk/escalated counts across
-    `issues` - shared by build_aggregate_report's Executive Summary and
-    the quarterly Release body (SPEC.md §6), so the two numbers can
-    never drift apart from each other.
+    `issues` - total/remediated/open/accepted_risk are shared by
+    build_aggregate_report's Executive Summary and the quarterly Release
+    body (SPEC.md §6), so those numbers can never drift apart from each
+    other. `escalated` is a whole-tracker count (any Issue currently
+    carrying the label, any period) - NOT what the Release body uses for
+    its own escalation count; see count_escalations_this_period for that
+    (period-filtered, parsed back from the aggregate report's own
+    Escalations-this-period table, same "can't drift" discipline applied
+    to a number that a whole-tracker count can't correctly express).
     """
     return {
         "total": len(issues),
@@ -128,6 +134,23 @@ def summary_counts(issues: list[IssueInfo]) -> dict[str, int]:
         "accepted_risk": sum(1 for i in issues if status_of(i) == "Accepted risk"),
         "escalated": sum(1 for i in issues if "escalated" in i.labels),
     }
+
+
+def count_escalations_this_period(aggregate_content: str) -> int:
+    """The number of real rows in an already-rendered aggregate report's
+    Escalations-this-period table (build_aggregate_report) - parsed back
+    out rather than independently recomputed, so the quarterly Release
+    body's own escalation count (SPEC.md §6) can never drift from what
+    the report itself shows. The same reuse discipline parse_issue_title/
+    parse_issue_body already apply to an Issue's own format, one level
+    up (a report file, not an Issue body) - matching risk_assessment.py's
+    parse_report_issue_numbers.
+    """
+    section = aggregate_content.split("## Escalations this period", 1)[1]
+    section = section.split("## Reviewer attestation", 1)[0]
+    if "No escalations this period" in section or ESCALATIONS_NOT_PROVIDED in section:
+        return 0
+    return len(re.findall(r"\[#\d+\]", section))
 
 
 def parse_issue_title(title: str) -> str:

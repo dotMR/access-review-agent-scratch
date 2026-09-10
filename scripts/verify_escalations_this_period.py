@@ -13,6 +13,14 @@ for an Issue's whole remaining life once applied (ADR-0005's "fires
 once"), so a naive label check would re-report the same escalation in
 every subsequent quarter forever.
 
+Also covers the quarterly Release body's own escalation count
+(_build_release_payload, orchestrator.py) - found to have the same class
+of bug one level up: it used summary_counts(all_issues)["escalated"], a
+whole-tracker label count that can't express "this period" either, so
+the Release body and the report's own table could disagree even after
+the first fix. Now parsed back from the report's own rendered table
+(count_escalations_this_period) instead.
+
 Mocks list_issues and get_escalation_comment_date (both real-API-only,
 never dry-run-gated); get_adapter is mocked with a small recording
 adapter so the committed aggregate content can be inspected directly,
@@ -143,10 +151,48 @@ async def case_no_escalations_renders_real_empty_result() -> bool:
     return not problems
 
 
+def case_release_body_escalation_count_matches_report() -> bool:
+    """The Release body's escalation count must come from the same
+    period-filtered computation as the report's own Escalations table,
+    not a separate whole-tracker label count that can drift from it -
+    the real bug found in Q2's actual Release body (a stray Issue,
+    escalated during unrelated earlier testing, inflated the body's
+    count to 1 when the report's own table correctly showed 0 for the
+    period).
+    """
+    from access_review_agent.orchestrator import _build_release_payload
+    from access_review_agent.reports import build_aggregate_report
+
+    aggregate_content = build_aggregate_report(
+        "2026-Q2", {}, "2026-01-01T00:00:00Z", risk_assessment_rows=[], escalated_rows=[]
+    )
+    report_contents = {s: f"# fake {s} report" for s in ["aws", "github", "salesforce", "finance_erp", "vpn"]}
+    report_contents["aggregate"] = aggregate_content
+
+    _title, body, _assets = _build_release_payload("2026-Q2", report_contents, all_issues=[])
+
+    problems = []
+    if "0 escalation(s) this period" not in body:
+        problems.append(
+            "expected the Release body to show 0 escalations (matching the report's real "
+            f"'none' result) - got: {body.splitlines()[0]}"
+        )
+
+    status = "PASS" if not problems else "FAIL"
+    print(
+        f"[{status}] release-body-escalation-count — the Release body's escalation count is "
+        "parsed from the report's own period-filtered table, not a separate whole-tracker label count"
+    )
+    for p in problems:
+        print(f"         {p}")
+    return not problems
+
+
 async def main() -> None:
     results = [
         await case_only_this_periods_escalations_appear(),
         await case_no_escalations_renders_real_empty_result(),
+        case_release_body_escalation_count_matches_report(),
     ]
     total, passed = len(results), sum(results)
     print(f"\n{passed}/{total} cases passed")

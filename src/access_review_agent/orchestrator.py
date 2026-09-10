@@ -46,6 +46,7 @@ from access_review_agent.reports import (
     build_monthly_report,
     build_per_system_report,
     category_of,
+    count_escalations_this_period,
     parse_issue_title,
     source_employee_id,
     summary_counts,
@@ -304,14 +305,22 @@ def _build_release_payload(
     payload-building logic stays separate from that function's own
     file-reading/tagging concerns. `report_contents` must have all five
     system names plus "aggregate".
+
+    The body's escalation count comes from count_escalations_this_period
+    on the aggregate report content itself, NOT summary_counts(all_issues)
+    - that whole-tracker count can't express "this period" (the escalated
+    label persists for an Issue's whole remaining life once applied,
+    ADR-0005), and would drift from what the report's own Escalations
+    table shows.
     """
     year, quarter = period.split("-Q")
     counts = summary_counts(all_issues)
+    escalated_count = count_escalations_this_period(report_contents["aggregate"])
     report_links = "\n".join(f"- [{SYSTEM_DISPLAY[s]}](reports/{period}/{s}.md)" for s in SYSTEM_ORDER)
     body = (
         f"{counts['total']} findings identified this quarter. {counts['remediated']} "
         f"remediated, {counts['open']} open, {counts['accepted_risk']} accepted as risk. "
-        f"{counts['escalated']} escalation(s) this period.\n\n"
+        f"{escalated_count} escalation(s) this period.\n\n"
         f"**Reports:**\n{report_links}\n- [Aggregate](reports/{period}/aggregate.md)"
     )
     assets = {f"{name}.md": content.encode("utf-8") for name, content in report_contents.items()}
