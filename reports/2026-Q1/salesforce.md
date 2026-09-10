@@ -1,6 +1,6 @@
 # Access Review — Salesforce — 2026-Q1
 
-**Report generated:** 2026-09-09T11:00:12.635021+00:00
+**Report generated:** 2026-09-10T07:37:04.764570+00:00
 **Data snapshot:** N/A (manual/local run)
 **Model:** Tier 1 (Orphaned, Dormant admin-level, Dormant ad-hoc, Unapproved, Drift): plain Python, no model call (ADR-0006). Tier 2 (Identity resolution): claude-haiku-4-5-20251001 via the Agent SDK.
 **Reporting period:** 2026-Q1
@@ -18,8 +18,8 @@ One of these is generated per Information System (AWS, GitHub, Salesforce, Finan
 | Unapproved access | 0 | 0 | 0 | 0 |
 | Identity resolution | 0 | 0 | 0 | 0 |
 | Drift | 0 | 0 | 0 | 0 |
-| Dormant ad-hoc access | 0 | 0 | 0 | 0 |
-| **Total** | 0 | 0 | 0 | 0 |
+| Dormant ad-hoc access | 1 | 1 | 0 | 2 |
+| **Total** | 1 | 1 | 0 | 2 |
 
 ## Findings
 
@@ -57,7 +57,8 @@ One of these is generated per Information System (AWS, GitHub, Salesforce, Finan
 
 | Identity | Access detail | Expected per policy | Last used | Days dormant | Status | Issue |
 | :-- | :-- | :-- | :-- | :-- | :-- | :-- |
-| No findings | | | | | | |
+| Sleve McDichael | `read` access to salesforce | Role baseline is 'none'; ad-hoc grant unused &gt; 180 consecutive days | 2026-02-11 | 210 | Remediated | [#13](https://github.com/dotMR/access-review-agent-scratch/issues/13) |
+| Sleve McDichael | `read` access to salesforce | Role baseline is 'none'; ad-hoc grant unused &gt; 180 consecutive days | 2026-02-11 | 210 | Open | [#9](https://github.com/dotMR/access-review-agent-scratch/issues/9) |
 
 ## Sign-off
 
