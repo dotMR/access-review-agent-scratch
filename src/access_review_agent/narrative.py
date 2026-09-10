@@ -82,7 +82,12 @@ async def synthesize_narrative(entry: RiskAssessmentEntry) -> tuple[str, float]:
     see reference/milestone-6-agent-sdk-patterns/README.md for why that
     silently breaks.
     """
-    options = ClaudeAgentOptions(system_prompt=SYSTEM_PROMPT, allowed_tools=[], model=MODEL)
+    # max_turns=1 makes the "no tools, single-turn by construction" claim
+    # explicit rather than implicit (SPEC.md §3/§7's tool-call/iteration
+    # cap) - identity_resolution.py's build_options is the one place that
+    # cap is a real constraint, since allowed_tools=[] here already rules
+    # out a multi-turn tool-calling loop on its own.
+    options = ClaudeAgentOptions(system_prompt=SYSTEM_PROMPT, allowed_tools=[], model=MODEL, max_turns=1)
     prompt = _build_facts_prompt(entry)
     result_text: str | None = None
     cost_usd = 0.0
@@ -122,7 +127,9 @@ async def judge_narrative(facts: str, narrative: str, criterion: str) -> tuple[b
     """LLM-as-judge: does `narrative` satisfy `criterion` given `facts`?
     Returns (pass, reason, cost in USD).
     """
-    options = ClaudeAgentOptions(system_prompt=JUDGE_SYSTEM_PROMPT, allowed_tools=[], model=MODEL)
+    # See synthesize_narrative's own max_turns=1 comment above - same
+    # reasoning applies here.
+    options = ClaudeAgentOptions(system_prompt=JUDGE_SYSTEM_PROMPT, allowed_tools=[], model=MODEL, max_turns=1)
     prompt = f"FACTS:\n{facts}\n\nNARRATIVE:\n{narrative}\n\nCRITERION:\n{criterion}"
     result_text: str | None = None
     cost_usd = 0.0

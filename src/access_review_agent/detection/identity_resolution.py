@@ -121,6 +121,17 @@ def find_unresolved_candidates(data_dir: Path, system_name: str) -> list[dict[st
     ]
 
 
+# SPEC.md §3's tool-call/iteration cap, pinned from real run data: two live
+# identity-resolution queries against the scratch repo's actual data
+# (GitHub's svc-cicd-deploy, VPN's kjack_vpn) both completed in exactly 4
+# turns (2 tool calls + 2 results, matching the 2-tool registry below).
+# 10 leaves headroom for a retry/self-correction cycle without being
+# effectively unbounded - this is the only Agent SDK call anywhere in the
+# codebase with real tool access (narrative.py's synthesis/judge calls pass
+# allowed_tools=[] and are single-turn by construction, no cap needed there).
+IDENTITY_RESOLUTION_MAX_TURNS = 10
+
+
 def build_options(system_name: str, data_dir: Path) -> ClaudeAgentOptions:
     access_tool = make_read_access_data_tool(system_name, data_dir)
     hris_tool = make_read_hris_tool(data_dir)
@@ -134,6 +145,7 @@ def build_options(system_name: str, data_dir: Path) -> ClaudeAgentOptions:
     return ClaudeAgentOptions(
         system_prompt=SYSTEM_PROMPT_TEMPLATE.format(system=system_name),
         mcp_servers={"access_review": server},
+        max_turns=IDENTITY_RESOLUTION_MAX_TURNS,
         allowed_tools=[
             "mcp__access_review__read_access_data",
             "mcp__access_review__read_hris",
