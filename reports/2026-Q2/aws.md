@@ -1,6 +1,6 @@
 # Access Review — AWS — 2026-Q2
 
-**Report generated:** 2026-09-10T07:14:14.307194+00:00
+**Report generated:** 2026-09-10T07:55:06.176776+00:00
 **Data snapshot:** N/A (manual/local run)
 **Model:** Tier 1 (Orphaned, Dormant admin-level, Dormant ad-hoc, Unapproved, Drift): plain Python, no model call (ADR-0006). Tier 2 (Identity resolution): claude-haiku-4-5-20251001 via the Agent SDK.
 **Reporting period:** 2026-Q2
