@@ -52,7 +52,11 @@ from access_review_agent.reports import (
     summary_counts,
     system_of,
 )
-from access_review_agent.risk_assessment import build_risk_assessment_entries, period_bounds
+from access_review_agent.risk_assessment import (
+    build_risk_assessment_entries,
+    period_bounds,
+    read_prior_aggregate_total,
+)
 from access_review_agent.tools.policy import DEFAULT_ROLE_ACCESS_MAPPING_PATH, read_policy
 from access_review_agent.units import SYSTEMS, SystemDetectionUnit
 
@@ -406,6 +410,12 @@ async def generate_quarterly_reports(
     remaining life once applied (ADR-0005's "fires once") and would
     otherwise re-appear in every subsequent quarter's report forever.
 
+    Also computes the Executive Summary's trend line: this period's total
+    findings vs. the prior period's (risk_assessment.read_prior_aggregate_total,
+    a local file read of the prior aggregate report - same "reuse what's
+    already there" discipline as the Escalations table above). "N/A, no
+    prior period" only for a genuine first quarter.
+
     Does NOT create the Release - see create_quarterly_release for that
     (Milestone 11 split it out deliberately so the human-in-the-loop
     publish gate can sit in front of release creation specifically,
@@ -478,10 +488,22 @@ async def generate_quarterly_reports(
             repo_full_name, path, content, f"Per-system report: {system_name}, {period}"
         )
 
+    prior_total = read_prior_aggregate_total(checkout_dir, period)
+    if prior_total is None:
+        trend_note = "N/A, no prior period"
+    else:
+        this_total = sum(len(issues) for issues in per_system_issues.values())
+        delta = this_total - prior_total
+        trend_note = (
+            f"{this_total} finding(s) this quarter vs. {prior_total} last quarter "
+            f"({'+' if delta >= 0 else ''}{delta})"
+        )
+
     aggregate_content = build_aggregate_report(
         period,
         per_system_issues,
         generated_at,
+        trend_note=trend_note,
         risk_assessment_rows=risk_assessment_rows,
         escalated_rows=escalated_rows,
     )

@@ -86,6 +86,24 @@ def previous_period(period: str) -> str:
     return f"{year}-Q{quarter - 1}"
 
 
+_PRIOR_TOTAL_RE = re.compile(r"^(\d+) findings identified this quarter", re.MULTILINE)
+
+
+def read_prior_aggregate_total(checkout_dir: Path, period: str) -> int | None:
+    """Total findings count parsed back out of the previous period's own
+    aggregate report (a local file read, not a GitHub API call - same
+    "reuse what's already there" discipline as read_prior_report, just
+    at the aggregate level) - for build_aggregate_report's Executive
+    Summary trend line. None if that period's aggregate report doesn't
+    exist yet (e.g. this is the first quarter).
+    """
+    path = checkout_dir / "reports" / previous_period(period) / "aggregate.md"
+    if not path.exists():
+        return None
+    match = _PRIOR_TOTAL_RE.search(path.read_text())
+    return int(match.group(1)) if match else None
+
+
 def period_bounds(period: str) -> tuple[str, str]:
     """[start, end) ISO date strings for a "YYYY-Qn" period - the
     quarter's first day and the day after its last, so a timestamp string
